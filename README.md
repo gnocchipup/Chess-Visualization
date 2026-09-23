@@ -135,8 +135,8 @@ devices it waits for you to tap, so the on-screen keyboard never pops up uninvit
 ## Scoring
 
 A session-scoped strip of small squares: **green** = solved with no wrong attempts, **red** = had at
-least one wrong attempt. The header shows running `Solved · Failed` counts, and the most recent 60
-results are displayed.
+least one wrong attempt. The header shows running `Solved · Failed` counts, and only the most recent
+25 results are kept and displayed.
 
 ## Architecture
 

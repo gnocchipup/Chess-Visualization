@@ -68,7 +68,9 @@ function renderScore() {
   const failed = results.length - solved;
   els.score.textContent = results.length ? `Solved ${solved} · Failed ${failed}` : '';
   els.scoreStrip.innerHTML = '';
-  for (const ok of results.slice(-60)) {
+  // getResults() is already capped at settings.MAX_RESULTS, so the strip and
+  // the Solved/Failed counts always cover the same recent puzzles.
+  for (const ok of results) {
     const sq = document.createElement('span');
     sq.className = 'sq-result ' + (ok ? 'ok' : 'bad');
     sq.title = ok ? 'Solved' : 'Failed';

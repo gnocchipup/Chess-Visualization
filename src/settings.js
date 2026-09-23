@@ -5,6 +5,9 @@ const KEY_RESULTS = NS + 'results';
 
 export const DEFAULT_PLY_BACK = 4;
 
+/** Only the most recent results are kept — older ones fall off the log. */
+export const MAX_RESULTS = 25;
+
 export function getPlyBack() {
   const raw = localStorage.getItem(KEY_PLY_BACK);
   const n = raw === null ? DEFAULT_PLY_BACK : parseInt(raw, 10);
@@ -29,7 +32,7 @@ export function setActiveSetId(id) {
 export function getResults() {
   try {
     const arr = JSON.parse(localStorage.getItem(KEY_RESULTS) || '[]');
-    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'boolean') : [];
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'boolean').slice(-MAX_RESULTS) : [];
   } catch {
     return [];
   }
@@ -38,8 +41,9 @@ export function getResults() {
 export function pushResult(ok) {
   const arr = getResults();
   arr.push(!!ok);
-  localStorage.setItem(KEY_RESULTS, JSON.stringify(arr));
-  return arr;
+  const trimmed = arr.slice(-MAX_RESULTS);
+  localStorage.setItem(KEY_RESULTS, JSON.stringify(trimmed));
+  return trimmed;
 }
 
 export function clearResults() {

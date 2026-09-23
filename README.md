@@ -1,4 +1,4 @@
-# Chess Puzzle Trainer
+# Chess Visualization for Noobs
 
 A local-first web app for drilling [Lichess](https://lichess.org) chess puzzles. Everything runs in
 the browser — no backend, no accounts, no server-side data. Puzzle sets live in IndexedDB; game

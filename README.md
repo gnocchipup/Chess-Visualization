@@ -97,7 +97,8 @@ Pick a set in the header and press **New puzzle**. Each puzzle is fetched live f
 - Or **drag from square to square** (mouse or touch; tap-tap works too — tap the from-square, then
   the target). The board is static, so no pieces move: the gesture is translated into the same
   move attempt as typing, e.g. dragging `g8`→`g7` is exactly typing `Rg7`. A dragged pawn reaching
-  the back rank promotes to a queen, unless the scripted solution underpromotes from those squares.
+  the back rank opens a promotion picker: choose the piece in the dialog — there is no default, and
+  picking the wrong piece is a failed attempt just like a wrong typed move.
   An impossible drag (no such legal move) is ignored silently rather than failing the puzzle.
 - **Correct** → the move becomes static text and the opponent's reply is filled in immediately, with
   no delay. Focus advances to your next input.

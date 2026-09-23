@@ -15,13 +15,13 @@ export const WHITE = 'white';
 export const BLACK = 'black';
 
 /** FEN piece letter -> bundled SVG asset. Uppercase = white, lowercase = black. */
-const PIECE_URL = {
+export const PIECE_URL = {
   K: wkUrl, Q: wqUrl, R: wrUrl, B: wbUrl, N: wnUrl, P: wpUrl,
   k: bkUrl, q: bqUrl, r: brUrl, b: bbUrl, n: bnUrl, p: bpUrl,
 };
 
 /** Alt text per piece letter. */
-const PIECE_NAME = {
+export const PIECE_NAME = {
   K: 'White king', Q: 'White queen', R: 'White rook',
   B: 'White bishop', N: 'White knight', P: 'White pawn',
   k: 'Black king', q: 'Black queen', r: 'Black rook',

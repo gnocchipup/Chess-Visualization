@@ -9,22 +9,24 @@ const check = (label, cond) => {
   if (!cond) failures++;
 };
 
-// Same promotion resolution as exercise.js attemptDrag()
-function dragDescriptor(chess, solution, solIdx, from, to) {
-  let promotion;
+// Same promotion handling as exercise.js attemptDrag(): a pawn reaching the
+// back rank pauses on the picker modal, so `promotion` is whatever the solver
+// chose in the dialog — never a default. A null choice means the modal was
+// cancelled and no move is attempted at all.
+function dragDescriptor(chess, from, to, promotion) {
   const piece = chess.get(from);
-  if (piece?.type === 'p' && (to[1] === '8' || to[1] === '1')) {
-    const scripted = solution[solIdx];
-    promotion = scripted.startsWith(from + to) && scripted[4] ? scripted[4] : 'q';
-  }
-  return { from, to, promotion };
+  const needsChoice = piece?.type === 'p' && (to[1] === '8' || to[1] === '1');
+  if (needsChoice && !promotion) return null; // modal cancelled: no attempt
+  return { from, to, promotion: needsChoice ? promotion : undefined };
 }
 
 // Same acceptance predicate as the drag branch of exercise.js attempt()
-function tryDragAttempt(chess, solution, solIdx, from, to) {
+function tryDragAttempt(chess, solution, solIdx, from, to, promotion) {
+  const desc = dragDescriptor(chess, from, to, promotion);
+  if (!desc) return { accepted: false, cancelled: true };
   let mv;
   try {
-    mv = chess.move(dragDescriptor(chess, solution, solIdx, from, to));
+    mv = chess.move(desc);
   } catch {
     return { accepted: false, illegal: true };
   }
@@ -72,21 +74,36 @@ const dual = new Chess('6k1/5ppp/8/8/8/8/7K/RR6 w - - 0 1');
 r = tryDragAttempt(dual, ['a1a8'], 0, 'b1', 'b8'); // scripted Ra8#, dragged Rb8#
 check('alternate mating drag accepted on final ply', r.accepted && dual.isCheckmate());
 
-// 6. Promotion drag defaults to queen when it matches the scripted move.
+// 6. Promotion drag with the solver picking the scripted queen is accepted.
 const promo = new Chess('8/2P5/8/8/8/8/k6K/8 w - - 0 1');
-r = tryDragAttempt(promo, ['c7c8q'], 0, 'c7', 'c8');
-check('promotion drag resolves to queen', r.accepted && r.mv.promotion === 'q');
+r = tryDragAttempt(promo, ['c7c8q'], 0, 'c7', 'c8', 'q');
+check('promotion drag with chosen queen accepted', r.accepted && r.mv.promotion === 'q');
 
-// 7. ...but uses the scripted piece for an underpromotion solution.
+// 7. Underpromotion solution: picking the scripted knight is accepted, ...
 const under = new Chess('8/2P5/8/8/8/8/k6K/8 w - - 0 1');
-r = tryDragAttempt(under, ['c7c8n'], 0, 'c7', 'c8');
-check('underpromotion drag uses scripted piece', r.accepted && r.mv.promotion === 'n');
+r = tryDragAttempt(under, ['c7c8n'], 0, 'c7', 'c8', 'n');
+check('underpromotion drag with chosen knight accepted', r.accepted && r.mv.promotion === 'n');
 
-// 8. A promotion drag that is not the solution is rejected (default queen),
-//    and the position is restored.
+// 8. ...but there is no auto-correct: picking a queen against a scripted
+//    underpromotion is a wrong attempt, and the position is restored.
+const wrongPick = new Chess('8/2P5/8/8/8/8/k6K/8 w - - 0 1');
+const wkFen = wrongPick.fen();
+r = tryDragAttempt(wrongPick, ['c7c8n'], 0, 'c7', 'c8', 'q');
+check('wrong piece choice rejected (no auto-scripted piece)', !r.accepted && r.mv.promotion === 'q');
+check('position unchanged after wrong piece choice', wrongPick.fen() === wkFen);
+
+// 9. Cancelling the picker modal is not an attempt: nothing is played.
+const cancelled = new Chess('8/2P5/8/8/8/8/k6K/8 w - - 0 1');
+const cFen = cancelled.fen();
+r = tryDragAttempt(cancelled, ['c7c8q'], 0, 'c7', 'c8', null);
+check('cancelled promotion makes no attempt', r.cancelled && !r.accepted);
+check('position unchanged after cancelled promotion', cancelled.fen() === cFen);
+
+// 10. A promotion drag that is not the solution is rejected, and the
+//     position is restored.
 const wrongPromo = new Chess('8/2P5/8/8/8/8/k6K/8 w - - 0 1');
 const wpFen = wrongPromo.fen();
-r = tryDragAttempt(wrongPromo, ['h1g1'], 0, 'c7', 'c8');
+r = tryDragAttempt(wrongPromo, ['h1g1'], 0, 'c7', 'c8', 'q');
 check('non-solution promotion drag rejected', !r.accepted && r.mv.promotion === 'q');
 check('position unchanged after rejected promotion', wrongPromo.fen() === wpFen);
 

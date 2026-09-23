@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { renderBoard, WHITE, BLACK } from './board.js';
+import { renderBoard, WHITE, BLACK, PIECE_URL, PIECE_NAME } from './board.js';
 import { fetchPuzzle } from './lichess.js';
 import { isKeyboardFirst } from './layout.js';
 
@@ -29,6 +29,11 @@ export class Exercise {
     // Optional shortcut: 'F' flips the board. Ignored while typing in the move
     // table so it never swallows a keystroke meant for a solution attempt.
     this.onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        // Cancel a pending promotion choice without failing the attempt.
+        if (!this.promoEl.hidden) this.closePromotion();
+        return;
+      }
       if (e.key !== 'f' && e.key !== 'F') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const t = e.target;
@@ -53,6 +58,33 @@ export class Exercise {
     this.chipEl.className = 'drag-chip';
     this.chipEl.hidden = true;
     document.body.appendChild(this.chipEl);
+
+    // Promotion picker modal. A pawn drag/tap to the back rank is not a
+    // complete move until the solver names the piece, so the gesture pauses
+    // on this dialog instead of silently defaulting to a queen. The pending
+    // from/to squares live in this.promoPending until a choice is made.
+    this.promoPending = null;
+    this.promoEl = document.createElement('div');
+    this.promoEl.className = 'promo-backdrop';
+    this.promoEl.hidden = true;
+    const panel = document.createElement('div');
+    panel.className = 'promo-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', 'Choose promotion piece');
+    const title = document.createElement('p');
+    title.className = 'promo-title';
+    title.textContent = 'Promote to';
+    this.promoChoices = document.createElement('div');
+    this.promoChoices.className = 'promo-choices';
+    panel.append(title, this.promoChoices);
+    this.promoEl.appendChild(panel);
+    document.body.appendChild(this.promoEl);
+    // Clicking the dimmed area outside the panel cancels the gesture without
+    // a failed attempt, matching how an illegal drag is ignored.
+    this.promoEl.addEventListener('pointerdown', (e) => {
+      if (e.target === this.promoEl) this.closePromotion();
+    });
 
     this.boardEl.addEventListener('pointerdown', (e) => {
       if (!this.active) return;
@@ -166,6 +198,7 @@ export class Exercise {
     this.dragMoved = false;
     this.selected = null;
     this.chipEl && this.hideChip();
+    this.promoEl && this.closePromotion();
   }
 
   /**
@@ -375,18 +408,55 @@ export class Exercise {
   /**
    * Translate a square-to-square drag/tap gesture into a move attempt on the
    * currently expected solution ply. Promotion: a pawn reaching the back rank
-   * promotes to the scripted piece when the gesture matches the solution's
-   * from/to, otherwise to a queen (the overwhelmingly common choice).
+   * opens the picker modal first — the solver must choose the piece, there is
+   * no default queen. Picking the wrong piece is a failed attempt, exactly as
+   * if the wrong promotion had been typed.
    */
   attemptDrag(from, to) {
     if (!this.active) return;
-    let promotion;
     const piece = this.chess.get(from);
     if (piece?.type === 'p' && (to[1] === '8' || to[1] === '1')) {
-      const scripted = this.solution[this.solIdx];
-      promotion = scripted.startsWith(from + to) && scripted[4] ? scripted[4] : 'q';
+      this.askPromotion(from, to, piece.color);
+      return;
     }
-    this.attempt(this.solIdx, { from, to, promotion });
+    this.attempt(this.solIdx, { from, to });
+  }
+
+  /**
+   * Open the promotion picker for a pending from/to gesture. `color` is the
+   * chess.js colour ('w'/'b') of the promoting pawn, so the choices show the
+   * solver's own pieces.
+   */
+  askPromotion(from, to, color) {
+    this.promoPending = { from, to, solIdx: this.solIdx };
+    this.promoChoices.innerHTML = '';
+    for (const type of ['q', 'r', 'b', 'n']) {
+      const letter = color === 'w' ? type.toUpperCase() : type;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'promo-choice';
+      btn.title = PIECE_NAME[letter];
+      const img = document.createElement('img');
+      img.src = PIECE_URL[letter];
+      img.alt = PIECE_NAME[letter];
+      img.draggable = false;
+      btn.appendChild(img);
+      btn.addEventListener('click', () => {
+        const pending = this.promoPending;
+        this.closePromotion();
+        // If the puzzle moved on while the dialog was open (e.g. a typed
+        // Enter attempt), the stale gesture is dropped by attempt()'s guard.
+        this.attempt(pending.solIdx, { from: pending.from, to: pending.to, promotion: type });
+      });
+      this.promoChoices.appendChild(btn);
+    }
+    this.promoEl.hidden = false;
+    this.promoChoices.firstChild?.focus();
+  }
+
+  closePromotion() {
+    this.promoPending = null;
+    this.promoEl.hidden = true;
   }
 
   attempt(solIdx, drag = null) {

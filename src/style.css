@@ -231,6 +231,66 @@ main {
   z-index: 10;
 }
 
+/* Promotion picker modal: shown when a pawn drag/tap reaches the back rank.
+   The solver must choose the piece — there is no silent queen default.
+   Sits above the drag chip (z-index 10) and the mobile top bar. */
+.promo-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 20;
+}
+
+/* display:flex above would override the `hidden` attribute, so restore it. */
+.promo-backdrop[hidden] {
+  display: none;
+}
+
+.promo-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem 1.1rem;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.promo-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.promo-choices {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.promo-choice {
+  width: 64px;
+  height: 64px;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.promo-choice:hover,
+.promo-choice:focus-visible {
+  border-color: var(--accent);
+}
+
+.promo-choice img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 #side {
   /* Fixed, non-growing column. `flex-grow: 1` used to let this absorb all the
      leftover width on a wide screen, which stretched the move table's three

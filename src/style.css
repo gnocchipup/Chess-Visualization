@@ -201,14 +201,18 @@ main {
   background: var(--dark-sq);
 }
 
-/* Drag/tap input feedback: inset outlines keep the square's intrinsic colour
-   visible (no pieces move — the gesture is only solution input). */
-.board .sq.drag-from {
-  box-shadow: inset 0 0 0 4px var(--accent-2);
-}
-
-.board .sq.drag-over {
-  box-shadow: inset 0 0 0 4px var(--accent);
+/* Drag/tap input feedback: a translucent grey chip "held" under the pointer
+   (no pieces move — the gesture is only solution input). Fixed positioning
+   keeps it above the board without being clipped by its rounded border. */
+.drag-chip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background: rgba(140, 140, 140, 0.45);
+  border: 2px solid rgba(140, 140, 140, 0.65);
+  pointer-events: none;
+  z-index: 10;
 }
 
 #side {

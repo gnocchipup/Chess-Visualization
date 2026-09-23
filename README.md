@@ -298,7 +298,8 @@ pieces keep their own terms.
   fall back to anything — by design, since the API is the source of truth for puzzle alignment.
 - **The board is static.** It renders once per puzzle and never animates — pieces are never dragged
   and moves are never shown on it. Square-to-square drag/tap gestures are accepted purely as an
-  alternative way to *enter* a solution move, with square highlights as the only visual feedback.
+  alternative way to *enter* a solution move; the only visual feedback is a translucent grey chip
+  held under the pointer (or parked on the tap-selected square).
 - **`.zst` files are rejected.** Decompress `lichess_db_puzzle.csv.zst` before building a set.
 - **sql.js keeps the whole database in memory.** Comfortable into the low tens of thousands of
   puzzles; the builder warns beyond 50,000.

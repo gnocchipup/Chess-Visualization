@@ -45,7 +45,13 @@ export class Exercise {
     this.dragFrom = null; // square where the current gesture started
     this.dragMoved = false; // pointer left the start square during the gesture
     this.selected = null; // tap-selected square awaiting a target tap
-    this.dragPainted = []; // square elements currently highlighted
+
+    // The only visual feedback: a translucent grey chip "held" under the
+    // pointer while dragging, parked on the selected square after a tap.
+    this.chipEl = document.createElement('div');
+    this.chipEl.className = 'drag-chip';
+    this.chipEl.hidden = true;
+    document.body.appendChild(this.chipEl);
 
     this.boardEl.addEventListener('pointerdown', (e) => {
       if (!this.active) return;
@@ -58,14 +64,14 @@ export class Exercise {
       this.dragFrom = sq;
       this.dragMoved = false;
       this.boardEl.setPointerCapture?.(e.pointerId);
-      this.paintDrag(sq, null);
+      this.showChip(e.clientX, e.clientY);
     });
 
     this.boardEl.addEventListener('pointermove', (e) => {
       if (!this.dragFrom || !e.isPrimary) return;
       const over = this.squareAt(e.clientX, e.clientY);
       if (over && over !== this.dragFrom) this.dragMoved = true;
-      this.paintDrag(this.dragFrom, over && over !== this.dragFrom ? over : null);
+      this.moveChip(e.clientX, e.clientY);
     });
 
     this.boardEl.addEventListener('pointerup', (e) => {
@@ -78,30 +84,30 @@ export class Exercise {
       if (moved && to && to !== from) {
         // Drag released on a different square: submit from -> to.
         this.selected = null;
-        this.clearDragPaint();
+        this.hideChip();
         this.attemptDrag(from, to);
       } else if (this.selected && this.selected !== from) {
         // Tap-tap: a square was already selected, this tap is the target.
         const sel = this.selected;
         this.selected = null;
-        this.clearDragPaint();
+        this.hideChip();
         this.attemptDrag(sel, from);
       } else if (this.selected === from) {
         // Tapping the selected square again deselects it.
         this.selected = null;
-        this.clearDragPaint();
+        this.hideChip();
       } else {
         // Plain tap: select the square, wait for the target tap.
         this.selected = from;
-        this.paintDrag(from, null);
+        this.parkChip(from);
       }
     });
 
     this.boardEl.addEventListener('pointercancel', () => {
       this.dragFrom = null;
       this.dragMoved = false;
-      this.clearDragPaint();
-      if (this.selected) this.paintDrag(this.selected, null);
+      if (this.selected) this.parkChip(this.selected);
+      else this.hideChip();
     });
   }
 
@@ -116,24 +122,31 @@ export class Exercise {
     return this.boardEl.querySelector(`[data-square="${name}"]`);
   }
 
-  paintDrag(from, over) {
-    this.clearDragPaint();
-    const fromEl = this.sqEl(from);
-    if (fromEl) {
-      fromEl.classList.add('drag-from');
-      this.dragPainted.push(fromEl);
-    }
-    const overEl = over && this.sqEl(over);
-    if (overEl) {
-      overEl.classList.add('drag-over');
-      this.dragPainted.push(overEl);
-    }
+  /** Show the chip centred on a viewport point (the pointer). */
+  showChip(x, y) {
+    // Size relative to a board square, like a piece; recomputed every time
+    // so a resize between gestures cannot leave a stale size.
+    const sqSize = this.boardEl.getBoundingClientRect().width / 8;
+    const d = Math.round(sqSize * 0.75);
+    this.chipEl.style.width = this.chipEl.style.height = `${d}px`;
+    this.chipEl.hidden = false;
+    this.moveChip(x, y);
   }
 
-  clearDragPaint() {
-    // `clear()` calls this from the constructor before dragPainted exists.
-    for (const el of this.dragPainted || []) el.classList.remove('drag-from', 'drag-over');
-    this.dragPainted = [];
+  moveChip(x, y) {
+    this.chipEl.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+  }
+
+  /** Rest the chip on the centre of a board square (tap-tap selection). */
+  parkChip(square) {
+    const el = this.sqEl(square);
+    if (!el) return this.hideChip();
+    const r = el.getBoundingClientRect();
+    this.showChip(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
+  hideChip() {
+    this.chipEl.hidden = true;
   }
 
   clear() {
@@ -151,7 +164,7 @@ export class Exercise {
     this.dragFrom = null;
     this.dragMoved = false;
     this.selected = null;
-    this.clearDragPaint();
+    this.chipEl && this.hideChip();
   }
 
   /**
@@ -163,6 +176,9 @@ export class Exercise {
     if (!this.boardFen) return;
     this.orientation = this.orientation === WHITE ? BLACK : WHITE;
     renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
+    // A parked chip marks the tap-selected square; re-centre it on the
+    // re-rendered square so the selection survives the flip visually.
+    if (this.selected) this.parkChip(this.selected);
   }
 
   get active() {
@@ -373,9 +389,9 @@ export class Exercise {
     const input = this.inputEls.get(solIdx);
     const raw = input.value.trim();
     if (!drag && !raw) return;
-    // A real attempt supersedes any pending tap-selection highlight.
+    // A real attempt supersedes any pending tap-selection chip.
     this.selected = null;
-    this.clearDragPaint();
+    this.hideChip();
 
     let mv;
     try {

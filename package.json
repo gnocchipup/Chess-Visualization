@@ -1,1 +1,23 @@
-{"name":"chess-puzzle-trainer","private":true,"version":"0.1.0","type":"module","scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"dependencies":{"chess.js":"^1.4.0","papaparse":"^5.7.0","sql.js":"^1.14.2"},"devDependencies":{"vite":"^6.4.3"}}
+{
+  "name": "chess-puzzle-trainer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "npm run test:ply && npm run test:loop",
+    "test:ply": "node scripts/verify-yh7ub.mjs",
+    "test:loop": "node scripts/verify-solving.mjs",
+    "smoke": "node scripts/smoke-preview.mjs"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "papaparse": "^5.7.0",
+    "sql.js": "^1.14.2"
+  },
+  "devDependencies": {
+    "vite": "^6.4.3"
+  }
+}

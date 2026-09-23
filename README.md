@@ -302,5 +302,8 @@ pieces keep their own terms.
 
 - Puzzle and game data: [Lichess](https://lichess.org) (CC0).
 - Piece artwork: Cburnett (CC BY-SA 3.0 / BSD-3-Clause / GPLv2+).
+- Favicon / app logo (`public/noobvisualize.png`): generated with ChatGPT (OpenAI).
 - Libraries: `chess.js`, `papaparse`, `sql.js`, `vite` — see above.
-
+- Built in [Cline](https://cline.bot) Desktop with:
+  - **DeepSeek** — architecture, SQLite/sql.js design, ply-alignment logic, spec.
+  - **Kimi K3** (Moonshot AI) — implementation and coding assistance.

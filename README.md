@@ -195,16 +195,31 @@ npm run smoke   # needs `npm run preview` running in another terminal
 
 ## Deployment
 
-The build output is a plain static site, so it suits a static host such as Render's free Static Site
-tier:
+The build output is a plain static site, so it suits any static host.
+
+### GitHub Pages
+
+`.github/workflows/deploy.yml` builds `dist/` in CI and publishes it on every push to `main`. Two
+one-time repo-side steps:
+
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+2. Push to `main` — the site appears at `https://<you>.github.io/<repo>/`.
+
+Do **not** use Pages' "Deploy from a branch" mode on `main`: that serves the raw `index.html`, which
+points at the unbundled `/src/main.js` and cannot run in a browser.
+
+### Render
 
 | Setting | Value |
 | --- | --- |
 | Build command | `npm ci && npm run build` |
 | Publish directory | `dist` |
 
-`dist/` is git-ignored on purpose, so the host builds it rather than serving a committed bundle that
+`dist/` is git-ignored on purpose, so both hosts build it rather than serving a committed bundle that
 could silently drift from `src/`.
+
+`vite.config.js` sets `base: './'` so asset URLs are relative — the same build works at a domain root
+(Render) or a project subpath (GitHub Pages) with no per-host configuration.
 
 ## Licenses
 

@@ -72,6 +72,10 @@ export function renderBoard(el, fen, { orientation = WHITE } = {}) {
     for (const c of order) {
       const sq = document.createElement('div');
       sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+      // Algebraic name of this square (grid is always white's point of view),
+      // so drag/tap input can map pointer targets to squares in either
+      // orientation without re-deriving coordinates from the DOM order.
+      sq.dataset.square = 'abcdefgh'[c] + (8 - r);
       const piece = grid[r][c];
       if (piece) {
         const img = document.createElement('img');

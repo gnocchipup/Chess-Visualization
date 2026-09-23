@@ -37,6 +37,103 @@ export class Exercise {
       this.flip();
     };
     document.addEventListener('keydown', this.onKeyDown);
+
+    // Square-to-square drag/tap input. The board shows a static position a
+    // few plies before the puzzle, so pieces are never dragged; the gesture
+    // is only translated into a solution attempt, exactly as if the move had
+    // been typed. Pointer events cover mouse and touch with one code path.
+    this.dragFrom = null; // square where the current gesture started
+    this.dragMoved = false; // pointer left the start square during the gesture
+    this.selected = null; // tap-selected square awaiting a target tap
+    this.dragPainted = []; // square elements currently highlighted
+
+    this.boardEl.addEventListener('pointerdown', (e) => {
+      if (!this.active) return;
+      if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      const sq = this.squareAt(e.clientX, e.clientY);
+      if (!sq) return;
+      // Keep focus (and the mobile keyboard) wherever it is; the board is
+      // not a text entry point.
+      e.preventDefault();
+      this.dragFrom = sq;
+      this.dragMoved = false;
+      this.boardEl.setPointerCapture?.(e.pointerId);
+      this.paintDrag(sq, null);
+    });
+
+    this.boardEl.addEventListener('pointermove', (e) => {
+      if (!this.dragFrom || !e.isPrimary) return;
+      const over = this.squareAt(e.clientX, e.clientY);
+      if (over && over !== this.dragFrom) this.dragMoved = true;
+      this.paintDrag(this.dragFrom, over && over !== this.dragFrom ? over : null);
+    });
+
+    this.boardEl.addEventListener('pointerup', (e) => {
+      if (!this.dragFrom || !e.isPrimary) return;
+      const from = this.dragFrom;
+      const moved = this.dragMoved;
+      this.dragFrom = null;
+      this.dragMoved = false;
+      const to = this.squareAt(e.clientX, e.clientY);
+      if (moved && to && to !== from) {
+        // Drag released on a different square: submit from -> to.
+        this.selected = null;
+        this.clearDragPaint();
+        this.attemptDrag(from, to);
+      } else if (this.selected && this.selected !== from) {
+        // Tap-tap: a square was already selected, this tap is the target.
+        const sel = this.selected;
+        this.selected = null;
+        this.clearDragPaint();
+        this.attemptDrag(sel, from);
+      } else if (this.selected === from) {
+        // Tapping the selected square again deselects it.
+        this.selected = null;
+        this.clearDragPaint();
+      } else {
+        // Plain tap: select the square, wait for the target tap.
+        this.selected = from;
+        this.paintDrag(from, null);
+      }
+    });
+
+    this.boardEl.addEventListener('pointercancel', () => {
+      this.dragFrom = null;
+      this.dragMoved = false;
+      this.clearDragPaint();
+      if (this.selected) this.paintDrag(this.selected, null);
+    });
+  }
+
+  /** Square name under a viewport point, or null when outside the board. */
+  squareAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const sq = el?.closest?.('.sq');
+    return sq && this.boardEl.contains(sq) ? sq.dataset.square : null;
+  }
+
+  sqEl(name) {
+    return this.boardEl.querySelector(`[data-square="${name}"]`);
+  }
+
+  paintDrag(from, over) {
+    this.clearDragPaint();
+    const fromEl = this.sqEl(from);
+    if (fromEl) {
+      fromEl.classList.add('drag-from');
+      this.dragPainted.push(fromEl);
+    }
+    const overEl = over && this.sqEl(over);
+    if (overEl) {
+      overEl.classList.add('drag-over');
+      this.dragPainted.push(overEl);
+    }
+  }
+
+  clearDragPaint() {
+    // `clear()` calls this from the constructor before dragPainted exists.
+    for (const el of this.dragPainted || []) el.classList.remove('drag-from', 'drag-over');
+    this.dragPainted = [];
   }
 
   clear() {
@@ -51,6 +148,10 @@ export class Exercise {
     this.boardFen = null;
     this.orientation = WHITE;
     this.solverColor = null;
+    this.dragFrom = null;
+    this.dragMoved = false;
+    this.selected = null;
+    this.clearDragPaint();
   }
 
   /**
@@ -123,7 +224,8 @@ export class Exercise {
     this.boardFen = boardFen;
     this.solverColor = this.chess.turn() === 'b' ? BLACK : WHITE;
     this.orientation = this.solverColor;
-    this.boardEl.title = 'Press F to flip the board';
+    this.boardEl.title =
+      'Drag or tap square-to-square to enter a move · press F to flip the board';
     renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
 
     this.renderInfo(puzzle);
@@ -249,19 +351,46 @@ export class Exercise {
     this.inputEls.get(0)?.focus();
   }
 
-  attempt(solIdx) {
+  /**
+   * Translate a square-to-square drag/tap gesture into a move attempt on the
+   * currently expected solution ply. Promotion: a pawn reaching the back rank
+   * promotes to the scripted piece when the gesture matches the solution's
+   * from/to, otherwise to a queen (the overwhelmingly common choice).
+   */
+  attemptDrag(from, to) {
+    if (!this.active) return;
+    let promotion;
+    const piece = this.chess.get(from);
+    if (piece?.type === 'p' && (to[1] === '8' || to[1] === '1')) {
+      const scripted = this.solution[this.solIdx];
+      promotion = scripted.startsWith(from + to) && scripted[4] ? scripted[4] : 'q';
+    }
+    this.attempt(this.solIdx, { from, to, promotion });
+  }
+
+  attempt(solIdx, drag = null) {
     if (this.done || solIdx !== this.solIdx) return;
     const input = this.inputEls.get(solIdx);
     const raw = input.value.trim();
-    if (!raw) return;
+    if (!drag && !raw) return;
+    // A real attempt supersedes any pending tap-selection highlight.
+    this.selected = null;
+    this.clearDragPaint();
 
     let mv;
     try {
-      // Lenient SAN (strict: false accepts missing/extra trailing +/# etc.);
-      // unparseable or ambiguous input throws and is rejected.
-      mv = this.chess.move(raw, { strict: false });
+      if (drag) {
+        mv = this.chess.move({ from: drag.from, to: drag.to, promotion: drag.promotion });
+      } else {
+        // Lenient SAN (strict: false accepts missing/extra trailing +/# etc.);
+        // unparseable or ambiguous input throws and is rejected.
+        mv = this.chess.move(raw, { strict: false });
+      }
     } catch {
-      this.markWrong(input);
+      // Typed garbage is a failed attempt. An illegal drag (no such legal
+      // move) is ignored silently instead — a slipped finger should not fail
+      // the puzzle, matching how lichess treats impossible board gestures.
+      if (!drag) this.markWrong(input);
       return;
     }
 
@@ -272,7 +401,9 @@ export class Exercise {
     const accepted = uci === scripted || (isLast && this.chess.isCheckmate());
     if (!accepted) {
       this.chess.undo();
-      this.markWrong(input);
+      // Show what the drag was read as, so the feedback matches typed input.
+      if (drag) input.value = mv.san;
+      this.markWrong(input, { focus: !drag });
       return;
     }
 
@@ -296,14 +427,18 @@ export class Exercise {
     }
     const next = this.inputEls.get(this.solIdx);
     next.disabled = false;
-    next.focus();
+    // Drag input must not grab focus: on mobile that would pop the keyboard
+    // up over the board after every move.
+    if (!drag) next.focus();
   }
 
-  markWrong(input) {
+  markWrong(input, { focus = true } = {}) {
     this.failed = true;
     input.classList.add('wrong');
-    input.focus();
-    input.select();
+    if (focus) {
+      input.focus();
+      input.select();
+    }
   }
 
   reveal() {

@@ -170,6 +170,9 @@ main {
   border-radius: 4px;
   overflow: hidden;
   user-select: none;
+  /* Square-to-square drag is a solution input method; the browser must not
+     hijack the gesture for scrolling or pull-to-refresh on touch screens. */
+  touch-action: none;
 }
 
 .board .sq {
@@ -196,6 +199,16 @@ main {
 
 .board .sq.dark {
   background: var(--dark-sq);
+}
+
+/* Drag/tap input feedback: inset outlines keep the square's intrinsic colour
+   visible (no pieces move — the gesture is only solution input). */
+.board .sq.drag-from {
+  box-shadow: inset 0 0 0 4px var(--accent-2);
+}
+
+.board .sq.drag-over {
+  box-shadow: inset 0 0 0 4px var(--accent);
 }
 
 #side {

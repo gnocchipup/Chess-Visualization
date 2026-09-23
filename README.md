@@ -11,7 +11,8 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
 - **Puzzle set builder** — stream the official Lichess puzzle CSV, filter by rating range, and
   reservoir-sample a fixed number of puzzles into a portable SQLite database.
 - **Import / export** — sets are stored in IndexedDB and can be exported or imported as `.sqlite` files.
-- **Solving screen** — a static board, a PGN-style move table, and SAN entry for the solution.
+- **Solving screen** — a static board, a PGN-style move table, and SAN entry for the solution, plus
+  square-to-square drag/tap input that works with mouse and touch.
 - **Automatic board orientation** — the board is flipped when the puzzle is for the black side.
 - **Session scoring** — a Lichess-style strip of green/red squares.
 
@@ -49,10 +50,11 @@ committed.
 | `npm run dev` | Vite dev server with hot module replacement |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
-| `npm test` | Runs `test:ply`, `test:loop`, then `test:orient` |
+| `npm test` | Runs `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
 | `npm run test:loop` | Solving-loop logic tests |
 | `npm run test:orient` | Board-orientation rule against live puzzles |
+| `npm run test:drag` | Square-to-square drag-input logic tests |
 | `npm run smoke` | Smoke test a *running* preview server (see [Testing](#testing)) |
 
 ## Using it
@@ -88,6 +90,11 @@ Pick a set in the header and press **New puzzle**. Each puzzle is fetched live f
   you're solving is a text input; every other cell is static text.
 - Type your move in **SAN** and press **Enter**. Input is deliberately lenient — a missing or extra
   trailing `+` / `#` is accepted, but genuinely ambiguous or unparseable input is rejected.
+- Or **drag from square to square** (mouse or touch; tap-tap works too — tap the from-square, then
+  the target). The board is static, so no pieces move: the gesture is translated into the same
+  move attempt as typing, e.g. dragging `g8`→`g7` is exactly typing `Rg7`. A dragged pawn reaching
+  the back rank promotes to a queen, unless the scripted solution underpromotes from those squares.
+  An impossible drag (no such legal move) is ignored silently rather than failing the puzzle.
 - **Correct** → the move becomes static text and the opponent's reply is filled in immediately, with
   no delay. Focus advances to your next input.
 - **Incorrect** → the text turns red, stays put, and the puzzle is marked failed for scoring. You can
@@ -289,8 +296,9 @@ pieces keep their own terms.
 
 - **No offline mode.** If the Lichess API is unreachable the app shows a retryable error and will not
   fall back to anything — by design, since the API is the source of truth for puzzle alignment.
-- **The board is static.** It renders once per puzzle and never animates. There is no drag-and-drop,
-  no move highlighting, and no board interaction beyond the orientation flip.
+- **The board is static.** It renders once per puzzle and never animates — pieces are never dragged
+  and moves are never shown on it. Square-to-square drag/tap gestures are accepted purely as an
+  alternative way to *enter* a solution move, with square highlights as the only visual feedback.
 - **`.zst` files are rejected.** Decompress `lichess_db_puzzle.csv.zst` before building a set.
 - **sql.js keeps the whole database in memory.** Comfortable into the low tens of thousands of
   puzzles; the builder warns beyond 50,000.

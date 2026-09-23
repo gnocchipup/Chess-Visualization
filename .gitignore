@@ -1,0 +1,50 @@
+# ---------- Node / dependencies ----------
+node_modules/
+.npm/
+
+# ---------- Build output ----------
+# `npm run build` regenerates dist/ byte-for-byte from src/ + index.html.
+dist/
+dist-ssr/
+
+# ---------- Vite caches ----------
+.vite/
+.vite-temp/
+node_modules/.vite/
+node_modules/.vite-temp/
+
+# ---------- Logs ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Local config / secrets ----------
+*.local
+.env
+.env.*
+!.env.example
+
+# ---------- Exported puzzle sets ----------
+# The builder writes <set-name>.sqlite to disk; these can be very large.
+# IndexedDB is the working store, so exports never need to be committed.
+*.sqlite
+*.sqlite3
+*.db
+*.csv.zst
+
+# ---------- Editor / OS junk ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

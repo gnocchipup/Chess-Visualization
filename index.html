@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chess Puzzle Trainer</title>
+  </head>
+  <body>
+    <header>
+      <h1>Chess Puzzle Trainer</h1>
+      <div class="header-controls">
+        <label class="set-picker">
+          Set
+          <select id="set-select"></select>
+        </label>
+        <label>
+          Ply back
+          <input id="ply-back" type="number" min="0" step="1" value="4" />
+        </label>
+        <button id="btn-builder" type="button">Puzzle sets</button>
+        <button id="btn-new" type="button">New puzzle</button>
+        <button id="btn-reveal" type="button" disabled>Reveal solution</button>
+        <span id="score" class="score" title="Session score"></span>
+      </div>
+    </header>
+
+    <div id="score-strip" class="score-strip" aria-label="Session results"></div>
+
+    <main>
+      <section id="board-wrap">
+        <div id="board" class="board" aria-label="Chess board"></div>
+      </section>
+      <section id="side">
+        <div id="puzzle-info" class="puzzle-info">
+          <p class="muted" id="empty-state">
+            No puzzle loaded. Select or create a puzzle set, then press
+            <strong>New puzzle</strong>.
+          </p>
+        </div>
+        <div id="error-box" class="error" hidden></div>
+        <div id="move-table-wrap">
+          <table id="move-table" class="move-table"></table>
+        </div>
+      </section>
+    </main>
+
+    <section id="builder" hidden>
+      <h2>Puzzle sets</h2>
+      <div class="builder-grid">
+        <fieldset>
+          <legend>Create puzzle set</legend>
+          <p class="muted">
+            Select the plain, decompressed <code>lichess_db_puzzle.csv</code>.
+            A <code>.csv.zst</code> must be decompressed first.
+          </p>
+          <label class="file-label">
+            CSV file
+            <input id="csv-file" type="file" accept=".csv" />
+          </label>
+          <label>
+            Rating min
+            <input id="rating-min" type="number" value="800" step="1" />
+          </label>
+          <label>
+            Rating max
+            <input id="rating-max" type="number" value="1600" step="1" />
+          </label>
+          <label>
+            Number of puzzles
+            <input id="puzzle-count" type="number" min="1" value="1000" step="1" />
+          </label>
+          <label>
+            Set name
+            <input id="set-name" type="text" placeholder="My puzzle set" />
+          </label>
+          <button id="btn-build" type="button">Build set</button>
+          <div id="build-progress" class="progress" aria-live="polite"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Your sets</legend>
+          <ul id="set-list" class="set-list"></ul>
+          <label class="file-label">
+            Import existing .sqlite
+            <input id="import-file" type="file" accept=".sqlite,.db,.sqlite3" />
+          </label>
+          <div id="builder-msg" class="progress"></div>
+        </fieldset>
+      </div>
+    </section>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

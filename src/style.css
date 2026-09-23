@@ -97,6 +97,16 @@ button:disabled {
   color: var(--muted);
 }
 
+.help-link {
+  font-size: 0.85rem;
+  color: #8db3e2;
+  text-decoration: none;
+}
+
+.help-link:hover {
+  text-decoration: underline;
+}
+
 .score-strip {
   display: flex;
   gap: 3px;

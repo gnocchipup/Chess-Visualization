@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How to use — Chess Puzzle Trainer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #181512;
+        --panel: #26221e;
+        --text: #e8e2d9;
+        --muted: #9a9186;
+        --accent: #7fa650;
+        --wrong: #d05555;
+        --border: #3a352f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+      header {
+        padding: 0.6rem 1rem;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+      }
+      header a {
+        color: #8db3e2;
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      header a:hover { text-decoration: underline; }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 1rem 1.25rem 3rem;
+      }
+      h1 { font-size: 1.3rem; }
+      h2 {
+        font-size: 1.05rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3rem;
+      }
+      code {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0.05rem 0.3rem;
+        font-size: 0.9em;
+      }
+      a { color: #8db3e2; }
+      .ok { color: var(--accent); font-weight: 600; }
+      .bad { color: var(--wrong); font-weight: 600; }
+      .muted { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="./index.html">&larr; Back to the app</a>
+    </header>
+    <main>
+      <h1>Chess Puzzle Trainer — How to use</h1>
+      <p class="muted">
+        A browser app for drilling
+        <a href="https://lichess.org">Lichess</a> chess puzzles. Everything runs
+        locally in your browser; an internet connection is required because each
+        puzzle is fetched live from the Lichess API.
+      </p>
+
+      <h2>Create a puzzle set</h2>
+      <ol>
+        <li>
+          Download the puzzle database from
+          <a href="https://database.lichess.org/">database.lichess.org</a> and
+          <strong>decompress <code>lichess_db_puzzle.csv.zst</code>
+          first</strong> (with <code>zstd -d</code>, 7-Zip, or similar). The app
+          only accepts the plain, decompressed
+          <code>lichess_db_puzzle.csv</code>.
+        </li>
+        <li>Click <strong>Puzzle sets</strong> in the app header.</li>
+        <li>
+          Choose the CSV file, set <strong>Rating min</strong>,
+          <strong>Rating max</strong>, and <strong>Number of puzzles</strong>,
+          give the set a <strong>name</strong>, and press
+          <strong>Build set</strong>.
+        </li>
+      </ol>
+      <p>
+        The set is saved in your browser (IndexedDB) and also offered as a
+        downloadable <code>.sqlite</code> file, which you can re-import later
+        with <strong>Import existing .sqlite</strong>. Keep sets to roughly
+        50,000 puzzles or fewer.
+      </p>
+
+      <h2>How to play</h2>
+      <ol>
+        <li>
+          Pick a set in the header dropdown and press
+          <strong>New puzzle</strong>.
+        </li>
+        <li>
+          The board shows the position a few moves before the puzzle starts;
+          <strong>Ply back</strong> controls how much of that run-up is shown.
+          The move table lists those context moves.
+        </li>
+        <li>
+          Type your move in <strong>SAN</strong> (e.g. <code>Nf3</code>,
+          <code>Qxh7+</code>) into the highlighted cell and press
+          <strong>Enter</strong>. A missing or extra trailing
+          <code>+</code>/<code>#</code> is fine.
+        </li>
+        <li>
+          <span class="ok">Correct</span> &rarr; the opponent's reply is filled
+          in automatically; continue with your next move.
+          <span class="bad">Incorrect</span> &rarr; the move turns red and the
+          puzzle is marked failed, but you can retry.
+        </li>
+        <li>
+          On the final move, any legal move that delivers checkmate is
+          accepted.
+        </li>
+        <li>
+          <strong>Reveal solution</strong> fills in the remaining moves and
+          marks the puzzle failed.
+        </li>
+        <li>
+          The board flips automatically when you are solving as black; press
+          <strong>F</strong> at any time to flip it manually.
+        </li>
+      </ol>
+      <p>
+        The strip of squares under the header is your session score:
+        <span class="ok">green</span> = solved with no wrong attempts,
+        <span class="bad">red</span> = at least one wrong attempt.
+      </p>
+
+      <h2>Licenses</h2>
+      <ul>
+        <li>
+          <strong>Puzzle and game data</strong> —
+          <a href="https://database.lichess.org/">Lichess open database</a>,
+          released under
+          <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>
+          (public domain).
+        </li>
+        <li>
+          <strong>Chess piece artwork</strong> — the Cburnett chess set by
+          <strong>Cburnett</strong>, from
+          <a href="https://commons.wikimedia.org/wiki/File:Chess_klt45.svg"
+            >Wikimedia Commons</a
+          >, licensed under CC BY-SA 3.0 / BSD 3-Clause / GPL v2+ / GFDL.
+          Attribution required.
+        </li>
+        <li>
+          <strong>Libraries</strong> —
+          <a href="https://github.com/jhlywa/chess.js">chess.js</a>
+          (BSD-2-Clause),
+          <a href="https://github.com/mholt/PapaParse">papaparse</a> (MIT),
+          <a href="https://github.com/sql-js/sql.js">sql.js</a> (MIT),
+          <a href="https://github.com/vitejs/vite">vite</a> (MIT).
+        </li>
+      </ul>
+      <p class="muted">
+        Full license details, including the project code's own status, are in
+        the repository
+        <a href="https://github.com/gnocchipup/Chess-Visualization#licenses"
+          >README</a
+        >.
+      </p>
+    </main>
+  </body>
+</html>

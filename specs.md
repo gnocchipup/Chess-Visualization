@@ -73,7 +73,7 @@ Layout: static board on the left, move table on the right, session score strip a
    - **Move table** lists plies `initialPly - X + 1` through `initialPly`, as a standard two-column White/Black table with move numbers (SAN). These are read-only context rows.
    - **Solving position** = position after `initialPly` plies, i.e. the puzzle position. The solver plays from here.
 4. Render the puzzle link as a clickable `https://lichess.org/training/{puzzle_id}` (opens in a new tab).
-5. Show the rating and themes.
+5. Show the rating and themes only on demand: they spoil the puzzle, so they are hidden behind a **Hint** button until it is clicked.
 
 ### Move table
 Standard PGN-style layout: rows of `N. <white> <black>`, with empty cells where a move doesn't exist (e.g. the lead-up may start on a black move).

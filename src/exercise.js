@@ -162,12 +162,28 @@ export class Exercise {
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = `lichess.org/training/${id}`;
+    // Rating and themes spoil the puzzle (mate in N, motif, ...), so they stay
+    // hidden behind a Hint button until the solver asks for them. infoEl is
+    // rebuilt on every puzzle, which resets the hidden state automatically.
     const meta = document.createElement('div');
     meta.className = 'muted';
+    meta.hidden = true;
     meta.textContent = `Rating ${rating ?? '?'}${themes ? ` · ${themes}` : ''}`;
+    const hintBtn = document.createElement('button');
+    hintBtn.type = 'button';
+    hintBtn.className = 'hint-btn';
+    hintBtn.textContent = 'Hint';
+    hintBtn.title = 'Show rating and themes';
+    hintBtn.addEventListener('click', () => {
+      meta.hidden = false;
+      hintBtn.remove();
+    });
+    const hintLine = document.createElement('div');
+    hintLine.className = 'hint-line';
+    hintLine.appendChild(hintBtn);
     this.statusEl = document.createElement('span');
     this.statusEl.className = 'status';
-    this.infoEl.append(link, meta, this.statusEl);
+    this.infoEl.append(link, hintLine, meta, this.statusEl);
   }
 
 

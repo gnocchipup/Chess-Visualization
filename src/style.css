@@ -116,6 +116,22 @@ button:disabled {
   text-decoration: underline;
 }
 
+/* On a wide screen the settings panel and the top bar are plain wrappers — the
+   header stays exactly the flex row it has always been — and the solving
+   controls rejoin that row. Only the mobile layout at the end of this file
+   turns them into boxes. */
+.header-body,
+.topbar,
+.topbar-actions {
+  display: contents;
+}
+
+/* No drawer and no shortened labels without a narrow viewport. */
+.drawer-toggle,
+.label-narrow {
+  display: none;
+}
+
 .score-strip {
   display: flex;
   gap: 3px;
@@ -417,4 +433,213 @@ fieldset input[type="text"] {
   font-size: 0.8rem;
   background: var(--panel);
   border: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile layout (see src/layout.js)
+   ---------------------------------------------------------------------------
+   Below 900px the board and the side panel already stack, so the header is
+   worth more as board space than as a toolbar: it becomes a fixed panel hanging
+   off the top of the viewport, leaving only the top bar (settings handle +
+   solving controls) on screen. Pull the bar down to reveal the settings; push
+   it up, tap outside, or press Escape to hide them again.
+
+   layout.js does the dragging and publishes the measured heights as
+   --topbar-h (bar height) and --drawer-body-h (settings panel height). Every
+   rule here is gated on html.drawer-ready, which only that script sets, so a
+   page where the script never ran keeps a normal, always-visible header. */
+@media (max-width: 900px) {
+  html.drawer-ready body {
+    /* Keep the page content clear of the fixed top bar. */
+    padding-top: var(--topbar-h, 0px);
+  }
+
+  html.drawer-ready header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 30;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 0;
+    border-bottom: 0; /* the bar and the panel carry their own borders */
+    /* Closed: the panel is pushed up out of sight, which parks the top bar —
+       the header's last child — on the top edge of the screen. Open: 0. */
+    transform: translateY(var(--drawer-y, calc(-1 * var(--drawer-body-h, 0px))));
+    transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  html.drawer-ready body.drawer-open header {
+    --drawer-y: 0px;
+  }
+
+  /* Finger-tracked drag; --drawer-drag-y is set inline by layout.js. */
+  html.drawer-ready body.drawer-dragging header {
+    transition: none;
+    transform: translateY(var(--drawer-drag-y, calc(-1 * var(--drawer-body-h, 0px))));
+  }
+
+  /* While it is out the panel is modal: this backdrop dims the page and takes
+     the tap that dismisses the panel, so a stray tap cannot reach the board. */
+  html.drawer-ready body.drawer-open::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  /* --- the fixed top bar: the handle plus the solving controls --- */
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.6rem;
+    padding: 0.3rem 0.6rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .drawer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+    /* The handle is a drag surface: the browser must not scroll instead. */
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .drawer-toggle:active {
+    cursor: grabbing;
+  }
+
+  .drawer-grip {
+    width: 1.5rem;
+    height: 0.2rem;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  .drawer-chevron {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translate(-0.1rem, -0.1rem);
+    transition: transform 0.2s ease;
+  }
+
+  /* Points up once the panel is out: push the handle back up to hide it. */
+  body.drawer-open .drawer-chevron {
+    transform: rotate(-135deg) translate(-0.1rem, -0.1rem);
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-left: auto;
+  }
+
+  .label-wide {
+    display: none;
+  }
+
+  .label-narrow {
+    display: inline;
+  }
+
+  /* --- the settings panel itself --- */
+
+  .header-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem 0.7rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-body .app-title {
+    font-size: 1rem;
+  }
+
+  .header-body .app-logo {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  /* One control per row, with finger-sized targets. */
+  .header-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+
+  /* A set label can be long, and buttons read better full width on a phone. */
+  .header-controls > .set-picker,
+  .header-controls > button,
+  .header-controls > .score,
+  .header-controls > .help-link {
+    grid-column: 1 / -1;
+  }
+
+  .header-controls .set-picker select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* --- stacked board + side panel --- */
+
+  main {
+    padding: 0.5rem 0.5rem 1.5rem;
+    gap: 0.75rem;
+  }
+
+  /* 92vw plus the page padding has to stay inside the viewport, otherwise the
+     board would force a horizontal scrollbar on the narrowest phones. */
+  .board {
+    width: min(560px, 92vw);
+  }
+
+  #side {
+    flex: 1 1 100%;
+    max-width: 560px;
+  }
+
+  #move-table-wrap {
+    max-height: 45vh;
+  }
+
+  #builder {
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .builder-grid {
+    gap: 1rem;
+  }
+
+  fieldset {
+    min-width: 0; /* the 300px floor overflows a phone */
+  }
+
+  /* A native file input keeps its intrinsic width otherwise and overflows
+     the fieldset ("Choose File" + "No file chosen" ≈ 270px). */
+  .file-label input[type="file"] {
+    max-width: 100%;
+  }
 }

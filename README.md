@@ -15,6 +15,9 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
   square-to-square drag/tap input that works with mouse and touch.
 - **Automatic board orientation** — the board is flipped when the puzzle is for the black side.
 - **Session scoring** — a Lichess-style strip of green/red squares.
+- **Small-screen layout** — below 900 px the settings header auto-hides behind a fixed top bar as
+  a pull-down drawer, so **New puzzle** and **Reveal** stay reachable and the board gets the whole
+  screen.
 
 ## Requirements
 
@@ -50,7 +53,8 @@ committed.
 | `npm run dev` | Vite dev server with hot module replacement |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
-| `npm test` | Runs `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
+| `npm test` | Runs `test:topbar`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
+| `npm run test:topbar` | Mobile top-bar drawer geometry (pure logic, runs offline) |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
 | `npm run test:loop` | Solving-loop logic tests |
 | `npm run test:orient` | Board-orientation rule against live puzzles |
@@ -117,7 +121,17 @@ move cell, so it can never swallow a keystroke meant for a solution attempt. Fli
 re-orients the static board — it does not change the position or the solving state, and the
 orientation resets to the auto-detected value for each new puzzle.
 
-### Scoring
+#### Small screens
+
+Below 900 px wide the settings header auto-hides: it hangs off the top of the viewport behind a
+fixed top bar that keeps **New puzzle** and **Reveal** (shortened from *Reveal solution*) always
+visible. Tap the **Settings** bar — or pull it down — to open the drawer; tap outside it, press
+`Escape`, or pull the bar back up to close it. Loading a new puzzle closes it automatically.
+
+The solution cell is only auto-focused when a keyboard and fine pointer are detected; on touch
+devices it waits for you to tap, so the on-screen keyboard never pops up uninvited over the board.
+
+## Scoring
 
 A session-scoped strip of small squares: **green** = solved with no wrong attempts, **red** = had at
 least one wrong attempt. The header shows running `Solved · Failed` counts, and the most recent 60
@@ -136,6 +150,7 @@ index.html                     entry point + static markup
     │   ├── src/lichess.js     GET /api/puzzle/{puzzleId}
     │   └── src/board.js       FEN -> static 8x8 SVG board
     ├── src/pieces/            Cburnett SVG piece set (see Licenses)
+    ├── src/layout.js          TopBar drawer for narrow screens (pure geometry, unit-tested)
     └── src/style.css
 ```
 
@@ -153,6 +168,7 @@ CREATE TABLE puzzles (
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 -- meta keys: name, created_at, rating_min, rating_max, puzzle_count, source_rows
 ```
+│   │   ├── verify-topbar.mjs   — top-bar drawer geometry (pure logic, offline)
 
 ### Ply alignment
 
@@ -185,11 +201,11 @@ orientation follows the side to move in the **solving** position.
 ## Testing
 
 ```powershell
-npm test        # ply alignment + solving loop + board orientation
+npm test        # drawer geometry + ply alignment + solving loop + orientation + drag input
 npm run smoke   # needs `npm run preview` running in another terminal
 ```
 
-- **`npm test` requires network access.** All three verify scripts hit the live Lichess API
+- **Only `test:topbar` runs offline; the rest of `npm test` requires network access.** The other four verify scripts hit the live Lichess API
   (`https://lichess.org/api/puzzle/...`) — nothing is mocked, mirroring the app's own
   no-network-no-app rule. `npm run test:ply` also asserts the exact board FEN and context rows for
   puzzle `Yh7uB`, making it the regression guard for the ply alignment described above.
@@ -305,7 +321,8 @@ pieces keep their own terms.
   puzzles; the builder warns beyond 50,000.
 - **IndexedDB quota.** Safari caps an origin at roughly 1 GB, which is fine for the intended set
   sizes but limits how many large sets you can keep at once.
-- **Both tests need network access,** so `npm test` cannot run offline or in a sandbox without egress.
+- **Most verify scripts need network access,** so `npm test` cannot run offline or in a sandbox
+  without egress. The exception is `test:topbar` (pure drawer geometry, no network).
 
 ## Credits
 

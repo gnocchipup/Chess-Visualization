@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { renderBoard, WHITE, BLACK } from './board.js';
 import { fetchPuzzle } from './lichess.js';
+import { isKeyboardFirst } from './layout.js';
 
 function playUci(chess, uci) {
   return chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
@@ -364,7 +365,11 @@ export class Exercise {
     });
 
     this.tableEl.appendChild(tbody);
-    this.inputEls.get(0)?.focus();
+    // Focus the first solution cell only where a keyboard is already there.
+    // On a touch screen this focus raises the on-screen keyboard before the
+    // solver has asked for it; the cell is one tap away, and board drag/tap
+    // input needs no focus at all.
+    if (isKeyboardFirst()) this.inputEls.get(0)?.focus();
   }
 
   /**

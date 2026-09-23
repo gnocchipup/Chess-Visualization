@@ -4,9 +4,14 @@ import * as settings from './settings.js';
 import * as idb from './idb.js';
 import { openSet, randomPuzzle, inspectSet } from './sqlsets.js';
 import { buildSet, saveSqliteFile, MAX_SAFE_PUZZLES } from './builder.js';
+import { TopBar } from './layout.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
+  appHeader: $('app-header'),
+  headerBody: $('header-body'),
+  topbar: $('topbar'),
+  drawerToggle: $('drawer-toggle'),
   setSelect: $('set-select'),
   plyBack: $('ply-back'),
   btnBuilder: $('btn-builder'),
@@ -30,6 +35,18 @@ const els = {
 let activeDb = null;
 let activeSetId = null;
 let busy = false;
+
+/* ---------- mobile layout ---------- */
+
+// On a narrow screen the header is an auto-hidden drawer: only the top bar
+// (settings handle + solving controls) stays on screen, until this is dragged
+// down. See src/layout.js and the mobile section of src/style.css.
+const topBar = new TopBar({
+  headerEl: els.appHeader,
+  bodyEl: els.headerBody,
+  topbarEl: els.topbar,
+  handleEl: els.drawerToggle,
+});
 
 const exercise = new Exercise({
   boardEl: $('board'),
@@ -257,6 +274,7 @@ els.btnNew.addEventListener('click', async () => {
     els.builderMsg.textContent = 'The active set contains no puzzles.';
     return;
   }
+  topBar.close(); // solving needs the board, not the settings
   busy = true;
   els.btnNew.disabled = true;
   try {

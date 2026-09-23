@@ -7,25 +7,53 @@
     <link rel="icon" type="image/png" href="./noobvisualize.png" />
   </head>
   <body>
-    <header>
-      <h1 class="app-title">
-        <img class="app-logo" src="./noobvisualize.png" alt="" />
-        Chess Visualization for Noobs
-      </h1>
-      <div class="header-controls">
-        <label class="set-picker">
-          Set
-          <select id="set-select"></select>
-        </label>
-        <label>
-          Ply back
-          <input id="ply-back" type="number" min="0" step="1" value="4" />
-        </label>
-        <button id="btn-builder" type="button">Puzzle sets</button>
-        <button id="btn-new" type="button">New puzzle</button>
-        <button id="btn-reveal" type="button" disabled>Reveal solution</button>
-        <span id="score" class="score" title="Session score"></span>
-        <a class="help-link" href="./readme.html">How to use</a>
+    <header id="app-header">
+      <!-- Settings. On a narrow screen this panel hangs off the top of the
+           viewport and is auto-hidden behind the top bar below (see
+           src/layout.js); on a wide screen both wrappers are display: contents
+           and this is simply the header row. -->
+      <div id="header-body" class="header-body">
+        <h1 class="app-title">
+          <img class="app-logo" src="./noobvisualize.png" alt="" />
+          Chess Visualization for Noobs
+        </h1>
+        <div class="header-controls">
+          <label class="set-picker">
+            Set
+            <select id="set-select"></select>
+          </label>
+          <label>
+            Ply back
+            <input id="ply-back" type="number" min="0" step="1" value="4" />
+          </label>
+          <button id="btn-builder" type="button">Puzzle sets</button>
+          <span id="score" class="score" title="Session score"></span>
+          <a class="help-link" href="./readme.html">How to use</a>
+        </div>
+      </div>
+
+      <!-- The only part of the header left on screen once the settings panel
+           is hidden, so the solving controls live here rather than inside it. -->
+      <div id="topbar" class="topbar">
+        <button
+          id="drawer-toggle"
+          class="drawer-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="header-body"
+          title="Drag or tap to show settings"
+        >
+          <span class="drawer-grip" aria-hidden="true"></span>
+          <span class="drawer-label">Settings</span>
+          <span class="drawer-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="topbar-actions">
+          <button id="btn-new" type="button">New puzzle</button>
+          <button id="btn-reveal" type="button" disabled>
+            <span class="label-wide">Reveal solution</span>
+            <span class="label-narrow">Reveal</span>
+          </button>
+        </div>
       </div>
     </header>
 

@@ -28,6 +28,9 @@ header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  /* Centre the title + controls so they line up with the centred main content
+     below, while the bar itself and its bottom border stay full width. */
+  justify-content: center;
   gap: 0.75rem 1.5rem;
   padding: 0.6rem 1rem;
   background: var(--panel);
@@ -100,6 +103,7 @@ button:disabled {
   padding: 0.4rem 1rem;
   min-height: 14px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .score-strip .sq-result {
@@ -119,10 +123,15 @@ button:disabled {
 
 main {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
   padding: 1rem;
   align-items: flex-start;
   flex-wrap: wrap;
+  /* Centre the board + side panel pair instead of hugging the left edge, and
+     cap the total width so the layout stays balanced on a wide monitor. */
+  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 #board-wrap {
@@ -132,6 +141,10 @@ main {
 .board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
+  /* Rows must be equal fractions too. Without this the implicit rows are
+     content-sized, so a sparse rank (no pieces) collapses and its cells
+     render as rectangles instead of squares. */
+  grid-template-rows: repeat(8, 1fr);
   width: min(560px, 90vw);
   aspect-ratio: 1;
   border: 4px solid var(--border);
@@ -144,23 +157,34 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(24px, 6.5vw, 56px);
-  line-height: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.board .sq .piece {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .board .sq.light {
   background: var(--light-sq);
-  color: #111;
 }
 
 .board .sq.dark {
   background: var(--dark-sq);
-  color: #111;
 }
 
 #side {
-  flex: 1 1 320px;
-  min-width: 300px;
+  /* Fixed, non-growing column. `flex-grow: 1` used to let this absorb all the
+     leftover width on a wide screen, which stretched the move table's three
+     columns to hundreds of pixels each. */
+  flex: 0 0 260px;
+  min-width: 0;
 }
 
 .puzzle-info {
@@ -222,18 +246,18 @@ main {
 }
 
 .move-table td {
-  padding: 0.15rem 0.5rem;
+  padding: 0.15rem 0.35rem;
   white-space: nowrap;
 }
 
 .move-table td.num {
   color: var(--muted);
-  width: 2.5rem;
+  width: 1.8rem;
   text-align: right;
 }
 
 .move-table td.mv {
-  min-width: 5.5rem;
+  min-width: 4rem;
 }
 
 .move-table td.mv.opponent {
@@ -246,7 +270,9 @@ main {
 }
 
 .move-table td.mv input {
-  width: 6.5rem;
+  /* Fill the cell instead of a fixed width, so the column drives the input
+     rather than the input overflowing the column. */
+  width: 100%;
   background: var(--panel-2);
 }
 
@@ -260,7 +286,8 @@ main {
 }
 
 #builder {
-  margin: 1rem;
+  max-width: 900px;
+  margin: 1rem auto;
   padding: 1rem;
   background: var(--panel);
   border: 1px solid var(--border);

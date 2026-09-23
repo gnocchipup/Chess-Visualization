@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { renderBoard } from './board.js';
+import { renderBoard, WHITE, BLACK } from './board.js';
 import { fetchPuzzle } from './lichess.js';
 
 function playUci(chess, uci) {
@@ -24,6 +24,19 @@ export class Exercise {
     this.revealBtn = revealBtn;
     this.onResult = onResult;
     this.clear();
+
+    // Optional shortcut: 'F' flips the board. Ignored while typing in the move
+    // table so it never swallows a keystroke meant for a solution attempt.
+    this.onKeyDown = (e) => {
+      if (e.key !== 'f' && e.key !== 'F') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      const tag = t && t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (t && t.isContentEditable) return;
+      this.flip();
+    };
+    document.addEventListener('keydown', this.onKeyDown);
   }
 
   clear() {
@@ -35,6 +48,20 @@ export class Exercise {
     this.done = false;
     this.cellEls = new Map();
     this.inputEls = new Map();
+    this.boardFen = null;
+    this.orientation = WHITE;
+    this.solverColor = null;
+  }
+
+  /**
+   * Flip the board 180 degrees. This only re-orients the static board; it does
+   * not change the position or touch the solving state, so it is safe to call
+   * at any point during a puzzle.
+   */
+  flip() {
+    if (!this.boardFen) return;
+    this.orientation = this.orientation === WHITE ? BLACK : WHITE;
+    renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
   }
 
   get active() {
@@ -91,7 +118,14 @@ export class Exercise {
     this.solution = this.deriveSolution(puzzle, solvingFen);
     this.chess = new Chess(solvingFen);
 
-    renderBoard(this.boardEl, boardFen);
+    // The solver plays the side to move in the solving position. If that is
+    // black, show the board from black's side.
+    this.boardFen = boardFen;
+    this.solverColor = this.chess.turn() === 'b' ? BLACK : WHITE;
+    this.orientation = this.solverColor;
+    this.boardEl.title = 'Press F to flip the board';
+    renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
+
     this.renderInfo(puzzle);
     this.renderTable();
     this.revealBtn.disabled = false;

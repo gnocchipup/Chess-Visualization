@@ -245,6 +245,7 @@ export class Exercise {
     this.tableEl.innerHTML = '';
     this.infoEl.innerHTML = '<p class="muted">Fetching puzzle from lichess…</p>';
     this.revealBtn.disabled = true;
+    this.revealBtn.hidden = true;
 
     let data;
     try {
@@ -325,7 +326,10 @@ export class Exercise {
 
     this.renderInfo(puzzle);
     this.renderTable();
-    this.revealBtn.disabled = false;
+    // Reveal stays hidden+disabled until the Hint button is clicked; renderInfo
+    // owns that state (see the hint handler there).
+    this.revealBtn.disabled = true;
+    this.revealBtn.hidden = true;
   }
 
   /** Prefer the API solution; fall back to the CSV Moves column (strip setup ply). */
@@ -374,16 +378,23 @@ export class Exercise {
     hintBtn.className = 'hint-btn';
     hintBtn.textContent = 'Hint';
     hintBtn.title = 'Show rating and themes';
+    // Reveal only becomes available after a hint is asked for: the button lives
+    // in the hint line and stays hidden until then, so a solver who never
+    // asks isn't tempted by it. It is re-hidden on the next puzzle.
+    this.revealBtn.hidden = true;
+    this.revealBtn.disabled = true;
     hintBtn.addEventListener('click', () => {
       meta.hidden = false;
       hintBtn.remove();
+      this.revealBtn.hidden = false;
+      this.revealBtn.disabled = this.done || !this.solution;
     });
     const hintLine = document.createElement('div');
     hintLine.className = 'hint-line';
-    hintLine.appendChild(hintBtn);
+    hintLine.append(hintBtn, meta, this.revealBtn);
     this.statusEl = document.createElement('span');
     this.statusEl.className = 'status';
-    this.infoEl.append(link, hintLine, meta, this.statusEl);
+    this.infoEl.append(link, hintLine, this.statusEl);
   }
 
 
@@ -648,7 +659,9 @@ export class Exercise {
   finish() {
     this.done = true;
     for (const input of this.inputEls.values()) input.disabled = true;
+    // Served (or revealed) — the button has no further use, so retire it.
     this.revealBtn.disabled = true;
+    this.revealBtn.hidden = true;
     const solved = !this.failed;
     if (this.statusEl) {
       this.statusEl.textContent = solved ? ' Solved!' : ' Failed';
@@ -665,6 +678,7 @@ export class Exercise {
     this.errorEl.append(span);
     if (!retry) {
       this.revealBtn.disabled = true;
+      this.revealBtn.hidden = true;
       return;
     }
     const btn = document.createElement('button');
@@ -676,6 +690,7 @@ export class Exercise {
     });
     this.errorEl.append(btn);
     this.revealBtn.disabled = true;
+    this.revealBtn.hidden = true;
   }
 
   hideError() {

@@ -15,9 +15,10 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
   square-to-square drag/tap input that works with mouse and touch.
 - **Automatic board orientation** — the board is flipped when the puzzle is for the black side.
 - **Session scoring** — a Lichess-style strip of green/red squares.
-- **Small-screen layout** — below 900 px the settings header auto-hides behind a fixed top bar as
-  a pull-down drawer, so **New puzzle** and **Reveal** stay reachable and the board gets the whole
-  screen.
+- **Spoiler-safe hints** — the puzzle's rating and themes stay hidden behind a **Hint** button; the
+  **Reveal solution** button only appears once you've asked for a hint.
+- **Small-screen layout** — below 900 px the board and the side panel stack, and the header
+  collapses its labels so **New puzzle** and the puzzle link stay reachable.
 
 ## Requirements
 
@@ -54,7 +55,7 @@ committed.
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
 | `npm test` | Runs `test:topbar`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
-| `npm run test:topbar` | Mobile top-bar drawer geometry (pure logic, runs offline) |
+| `npm run test:topbar` | Legacy drawer geometry (pure logic, runs offline) |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
 | `npm run test:loop` | Solving-loop logic tests |
 | `npm run test:orient` | Board-orientation rule against live puzzles |
@@ -87,7 +88,8 @@ An in-memory sql.js database gets uncomfortable past ~50,000 puzzles, so the bui
 
 ### 2. Solve a puzzle
 
-Pick a set in the header and press **New puzzle**. Each puzzle is fetched live from the Lichess API.
+Pick a set in the header, then press **New puzzle** under the move table. Each puzzle is fetched
+live from the Lichess API.
 
 - **Ply back** (default 4) controls how much of the game's run-up is shown as read-only context.
 - The **move table** lists context moves in standard `N. white black` layout, plus one text input
@@ -110,7 +112,11 @@ Pick a set in the header and press **New puzzle**. Each puzzle is fetched live f
 - **Incorrect** → the text turns red, stays put, and the puzzle is marked failed for scoring. You can
   retry.
 - On the **final ply**, any legal move that delivers checkmate is accepted, not just the scripted one.
-- **Reveal solution** fills the remaining cells in a muted style and marks the puzzle failed.
+- **Hint** reveals the puzzle's rating and themes. They spoil the puzzle, so they stay hidden until
+  you ask; pressing it retires the button.
+- **Reveal solution** fills the remaining cells in a muted style and marks the puzzle failed. It
+  appears in the hint line only after you've pressed **Hint**, so it's never offered to a solver who
+  hasn't asked for help. It disappears again once the puzzle is served or revealed.
 
 ### Board orientation
 
@@ -129,10 +135,10 @@ orientation resets to the auto-detected value for each new puzzle.
 
 #### Small screens
 
-Below 900 px wide the settings header auto-hides: it hangs off the top of the viewport behind a
-fixed top bar that keeps **New puzzle** and **Reveal** (shortened from *Reveal solution*) always
-visible. Tap the **Settings** bar — or pull it down — to open the drawer; tap outside it, press
-`Escape`, or pull the bar back up to close it. Loading a new puzzle closes it automatically.
+Below 900 px wide the board and the side panel stack, and the header compacts its labels (smaller
+title and logo) so the settings and puzzle link still fit on one row. The move table is capped at
+45 vh so a long solution can't push the controls off-screen — **New puzzle** sits directly beneath
+it, and the hint line (with **Reveal** shortened from *Reveal solution*) stays just above.
 
 The solution cell is only auto-focused when a keyboard and fine pointer are detected; on touch
 devices it waits for you to tap, so the on-screen keyboard never pops up uninvited over the board.
@@ -156,7 +162,7 @@ index.html                     entry point + static markup
     │   ├── src/lichess.js     GET /api/puzzle/{puzzleId}
     │   └── src/board.js       FEN -> static 8x8 SVG board
     ├── src/pieces/            Cburnett SVG piece set (see Licenses)
-    ├── src/layout.js          TopBar drawer for narrow screens (pure geometry, unit-tested)
+    ├── src/layout.js          legacy narrow-screen drawer (inert; pure geometry, unit-tested)
     └── src/style.css
 ```
 

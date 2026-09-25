@@ -70,14 +70,6 @@
         </div>
       </header>
 
-      <div class="controls">
-        <button id="btn-new" class="btn-primary" type="button">New puzzle</button>
-        <button id="btn-reveal" type="button" disabled>
-          <span class="label-wide">Reveal solution</span>
-          <span class="label-narrow">Reveal</span>
-        </button>
-      </div>
-
       <div id="score" class="score" title="Session score"></div>
       <div id="score-strip" class="score-strip" aria-label="Session results"></div>
 
@@ -95,6 +87,15 @@
           <div id="error-box" class="error" hidden></div>
           <div id="move-table-wrap">
             <table id="move-table" class="move-table"></table>
+          </div>
+          <div class="controls">
+            <button id="btn-new" class="btn-primary" type="button">New puzzle</button>
+            <!-- Moved into the hint line by exercise.js renderInfo() and only
+                 revealed once the solver asks for a hint. -->
+            <button id="btn-reveal" type="button" hidden disabled>
+              <span class="label-wide">Reveal solution</span>
+              <span class="label-narrow">Reveal</span>
+            </button>
           </div>
         </section>
       </main>

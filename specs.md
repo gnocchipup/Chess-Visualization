@@ -98,7 +98,7 @@ Lichess-style row of small squares, session-scoped, in `localStorage`:
 Keep a rolling count of solved/failed in the header.
 
 ### Controls
-"New puzzle", and a "Reveal solution" button that fills the remaining cells in a muted style and marks the puzzle failed.
+"New puzzle" sits under the move table in the side panel. "Reveal solution" fills the remaining cells in a muted style and marks the puzzle failed; it is placed inline with the hint line and stays hidden until the **Hint** button is clicked, so it is never offered to a solver who has not asked for a hint. It is re-hidden for every new puzzle and once the puzzle is served or revealed.
 
 ---
 

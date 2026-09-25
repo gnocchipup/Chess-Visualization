@@ -173,19 +173,32 @@ header h1,
   width: 270px;
 }
 
-/* Centered solving controls, mock style. */
+/* Solving controls, mock style. Sits under the move table in the side panel:
+   "New puzzle" is the primary action there, and "Reveal solution" is relocated
+   into the hint line (see exercise.js renderInfo) once a hint is requested. */
 .controls {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 0.7rem;
-  padding: 1.1rem 1rem 0;
+  margin-top: 0.9rem;
 }
 
 .controls button {
   border-radius: 7px;
   padding: 0.5rem 1.3rem;
   font-size: 0.95rem;
+}
+
+/* The reveal button also renders inside .puzzle-info's hint line, where it is
+   sized down to match the small hint button rather than the primary action. */
+.puzzle-info .hint-line #btn-reveal {
+  padding: 0.28rem 0.8rem;
+  font-size: 0.82rem;
+  background: #2b2721;
+  border: 1px solid var(--border);
+  border-radius: 5px;
 }
 
 .btn-primary,
@@ -307,7 +320,8 @@ a.icon-btn.help-link:hover {
   display: none;
 }
 
-/* Short Reveal label is mobile-only. */
+/* The reveal button sits inline in the side panel's hint line, so the wide
+   "Reveal solution" label is swapped for a short one on small screens. */
 .label-narrow {
   display: none;
 }
@@ -495,8 +509,20 @@ main {
   color: #8db3e2;
 }
 
+/* Hint row: the Hint button, the revealed rating/themes text, and the Reveal
+   solution button once it appears. Wraps so the themes list never pushes the
+   button off a narrow side panel. */
 .puzzle-info .hint-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-top: 0.45rem;
+}
+
+.puzzle-info .hint-line .muted {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .puzzle-info .hint-btn {
@@ -700,23 +726,10 @@ fieldset input[type="text"] {
 }
 
 /* ---------------------------------------------------------------------------
-   Mobile layout (see src/layout.js)
-   ---------------------------------------------------------------------------
-   Below 900px the board and the side panel already stack, so the header is
-   worth more as board space than as a toolbar: it becomes a fixed panel hanging
-   off the top of the viewport, leaving only the top bar (settings handle +
-   solving controls) on screen. Pull the bar down to reveal the settings; push
-   it up, tap outside, or press Escape to hide them again.
-
-   layout.js does the dragging and publishes the measured heights as
-   --topbar-h (bar height) and --drawer-body-h (settings panel height). Every
-   rule here is gated on html.drawer-ready, which only that script sets, so a
-   page where the script never ran keeps a normal, always-visible header. */
-/* ---------------------------------------------------------------------------
    Responsive: the mock keeps the gear/account dropdowns on every width, so
-   small screens only stack the board over the side panel (plus compact
-   header/controls). The legacy drawer hooks (hidden #header-body/#topbar)
-   stay display:none. */
+   small screens only stack the board over the side panel (plus a compact
+   header). The legacy drawer hooks from src/layout.js (hidden
+   #header-body/#topbar) stay display:none and are never rendered. */
 .header-body {
   display: none;
 }
@@ -773,6 +786,16 @@ fieldset input[type="text"] {
 
   #move-table-wrap {
     max-height: 45vh;
+  }
+
+  /* Reveal now lives in the side panel's hint line, so the short label is used
+     there instead of the full "Reveal solution". */
+  .label-wide {
+    display: none;
+  }
+
+  .label-narrow {
+    display: inline;
   }
 
   #builder {

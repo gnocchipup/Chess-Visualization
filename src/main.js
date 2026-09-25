@@ -79,12 +79,11 @@ const exercise = new Exercise({
         return;
       }
       reportResult(id, solved)
-        .then((next) => {
-          if (next) {
-            pendingNext = next;
-            els.btnNew.disabled = false;
-            els.btnNew.textContent = 'New puzzle ✓';
-          }
+        .then(() => {
+          // Queue advanced; the next New-puzzle press fetches at the
+          // CURRENT difficulty setting (read then, not now).
+          els.btnNew.disabled = false;
+          els.btnNew.textContent = 'New puzzle ✓';
         })
         .catch((err) => {
           // Non-fatal: the queue just doesn't advance; next press refetches.
@@ -94,10 +93,8 @@ const exercise = new Exercise({
   },
 });
 
-// Fresh puzzle prefetched alongside the casual report (nb=1). Shown on the
-// next New-puzzle press instead of fetching — still one puzzle per action,
-// it just arrives bundled with the report response.
-let pendingNext = null;
+// Difficulty is read fresh on every New-puzzle press (fetchNextPuzzle),
+// never cached — so mid-puzzle changes apply to the very next fetch.
 
 /* ---------- score strip ---------- */
 
@@ -362,10 +359,10 @@ async function onNewPuzzle() {
   els.btnNew.textContent = 'New puzzle';
   try {
     if (isLichessSource()) {
-      // Prefer the puzzle bundled with the last casual report (nb=1) —
-      // otherwise one fetch per press. Never prefetch or bulk-download.
-      const data = pendingNext ?? (await fetchNextPuzzle(settings.getDifficulty()));
-      pendingNext = null;
+      // One fetch per press at the current difficulty. No prefetching or
+      // bulk download — and no bundled puzzle from the report, which would
+      // carry the default difficulty and ignore mid-puzzle changes.
+      const data = await fetchNextPuzzle(settings.getDifficulty());
       await exercise.newPuzzleFromNext(data, settings.getPlyBack(), onNewPuzzle);
       return;
     }

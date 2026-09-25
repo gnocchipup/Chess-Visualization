@@ -74,23 +74,24 @@ export async function fetchNextPuzzle(difficulty = '') {
 
 /**
  * Report a finished Lichess-next puzzle as CASUAL (rated:false) and advance
- * the server queue: POST /api/puzzle/batch/mix?nb=1 (scope `puzzle:write`).
+ * the server queue: POST /api/puzzle/batch/mix?nb=0 (scope `puzzle:write`).
  *
- * Body: { solutions: [{ id, win, rated: false }] }. With nb=1 the response
- * also carries the next unseen puzzle ({ puzzles: [PuzzleAndGame] }), which
- * is returned so the caller can show it immediately — still one puzzle per
- * user action, no prefetching. `win` is your local solve result (reveal
- * counts as a loss client-side; per user choice reveals are NOT reported).
+ * Body: { solutions: [{ id, win, rated: false }] }. nb=0 on purpose: the
+ * solve endpoint takes NO difficulty parameter, so a bundled next puzzle
+ * would be picked at the default difficulty and silently swallow a
+ * difficulty change made mid-puzzle. The caller fetches the next puzzle
+ * separately via fetchNextPuzzle(), which honors the current difficulty.
+ * `win` is your local solve result (reveals are NOT reported, per choice).
  *
  * Anonymous callers (no token) resolve null — nothing to report.
- * Throws on 401 (caller should prompt re-login) and other HTTP failures.
+ * Throws on 401/403 (caller should prompt re-login) and other failures.
  */
 export async function reportResult(puzzleId, win) {
   const token = getToken();
   if (!token) return null;
   let res;
   try {
-    res = await fetch('https://lichess.org/api/puzzle/batch/mix?nb=1', {
+    res = await fetch('https://lichess.org/api/puzzle/batch/mix?nb=0', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -108,8 +109,6 @@ export async function reportResult(puzzleId, win) {
     throw new Error(`Lichess API returned HTTP ${res.status} for puzzle result.`);
   }
   const data = await res.json();
-  const next = data?.puzzles?.[0];
-  if (next) checkPuzzleShape(next, 'puzzle/batch next');
-  return next ?? null;
+  return data?.rounds?.[0] ?? null;
 }
 

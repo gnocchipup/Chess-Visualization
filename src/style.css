@@ -24,40 +24,197 @@ body {
   font-family: "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
+  padding: 1.25rem 1rem 2rem;
+}
+
+/* Mock shell: everything lives in one bordered card. */
+.shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  background: #201d19;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: visible;
 }
 
 header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  /* Centre the title + controls so they line up with the centred main content
-     below, while the bar itself and its bottom border stay full width. */
-  justify-content: center;
-  gap: 0.75rem 1.5rem;
-  padding: 0.6rem 1rem;
-  background: var(--panel);
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  background: transparent;
   border-bottom: 1px solid var(--border);
 }
 
-header h1 {
-  font-size: 1.1rem;
+header h1,
+.app-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  font-size: 1.2rem;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  letter-spacing: 0.01em;
+}
+
+.app-badge {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+}
+
+.app-logo {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+}
+
+.header-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.app-logo {
-  width: 2.7rem;
-  height: 2.7rem;
-  border-radius: 4px;
+.icon-btn,
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #26221d;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
 }
 
-.header-controls {
-  display: flex;
-  flex-wrap: wrap;
+.icon-btn:hover,
+.account-btn:hover {
+  border-color: #4a443c;
+}
+
+.avatar {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #20241a;
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+}
+
+.account-btn .caret {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.dropdown-wrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 330px;
+  max-width: calc(100vw - 3rem);
+  background: #29251f;
+  border: 1px solid #453e34;
+  border-radius: 10px;
+  padding: 0.9rem 1rem 1rem;
+  z-index: 60;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.menu[hidden] {
+  display: none;
+}
+
+.menu-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.55rem 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.menu-row select,
+.menu-row input[type="number"] {
+  width: 190px;
+  max-width: 55%;
+  background: #141210;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.menu-sep {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 0.7rem 0;
+}
+
+.menu-cta {
+  width: 100%;
+  background: var(--accent);
+  border: 0;
+  border-radius: 7px;
+  padding: 0.55rem;
+  font-weight: 600;
+}
+
+.account-menu {
+  width: 270px;
+}
+
+/* Centered solving controls, mock style. */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 1.1rem 1rem 0;
+}
+
+.controls button {
+  border-radius: 7px;
+  padding: 0.5rem 1.3rem;
+  font-size: 0.95rem;
+}
+
+.btn-primary,
+#btn-new {
+  background: var(--accent);
+  border: 1px solid transparent;
+  color: #f2ecdc;
+  font-weight: 600;
+}
+
+#btn-reveal {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 label {
@@ -103,14 +260,27 @@ button:disabled {
   border: 1px solid var(--border);
 }
 
+#btn-builder.menu-cta {
+  background: var(--accent);
+  border: 0;
+}
+
 .score {
+  text-align: center;
   font-size: 0.9rem;
   color: var(--muted);
+  padding: 0.55rem 1rem 0;
+}
+
+.score b {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .auth-area {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.5rem;
 }
 
@@ -133,57 +303,68 @@ button:disabled {
   text-decoration: underline;
 }
 
-/* On a wide screen the settings panel and the top bar are plain wrappers — the
-   header stays exactly the flex row it has always been — and the solving
-   controls rejoin that row. Only the mobile layout at the end of this file
-   turns them into boxes. */
-.header-body,
-.topbar,
-.topbar-actions {
-  display: contents;
+/* The header help affordance is a boxed icon button in the mock. */
+a.icon-btn.help-link {
+  color: var(--text);
+  font-size: 0.95rem;
+  min-width: 2.1rem;
+  justify-content: center;
 }
 
-/* No drawer and no shortened labels without a narrow viewport. */
-.drawer-toggle,
+a.icon-btn.help-link:hover {
+  text-decoration: none;
+}
+
+/* Backwards-compat hooks only: hidden drawer nodes never render. */
+.header-body[hidden],
+.topbar[hidden],
+.drawer-toggle[hidden] {
+  display: none;
+}
+
+/* Short Reveal label is mobile-only. */
 .label-narrow {
   display: none;
 }
 
 .score-strip {
   display: flex;
-  gap: 3px;
-  padding: 0.4rem 1rem;
-  min-height: 14px;
-  flex-wrap: wrap;
-  justify-content: center;
+  gap: 2px;
+  padding: 0.45rem 1.1rem 0.2rem;
+  min-height: 8px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .score-strip .sq-result {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  flex: 1 1 0;
+  min-width: 6px;
+  height: 7px;
+  border-radius: 999px;
   background: #555;
 }
 
 .score-strip .sq-result.ok {
   background: var(--accent);
+  opacity: 0.82;
 }
 
 .score-strip .sq-result.bad {
   background: var(--wrong);
+  opacity: 0.72;
 }
 
 main {
   display: flex;
   gap: 1.25rem;
-  padding: 1rem;
+  padding: 0.6rem 1.1rem 1.2rem;
   align-items: flex-start;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   /* Centre the board + side panel pair instead of hugging the left edge, and
      cap the total width so the layout stays balanced on a wide monitor. */
-  justify-content: center;
-  max-width: 900px;
-  margin: 0 auto;
+  justify-content: flex-start;
+  max-width: none;
+  margin: 0;
 }
 
 #board-wrap {
@@ -312,32 +493,33 @@ main {
   /* Fixed, non-growing column. `flex-grow: 1` used to let this absorb all the
      leftover width on a wide screen, which stretched the move table's three
      columns to hundreds of pixels each. */
-  flex: 0 0 260px;
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .puzzle-info {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.6rem 0.9rem;
-  margin-bottom: 0.75rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0.1rem 0 0.5rem;
+  margin-bottom: 0;
   font-size: 0.9rem;
 }
 
 .puzzle-info a {
-  color: #8db3e2;
+  color: var(--accent);
 }
 
 .puzzle-info .hint-line {
-  margin-top: 0.35rem;
+  margin-top: 0.45rem;
 }
 
 .puzzle-info .hint-btn {
-  padding: 0.15rem 0.6rem;
-  font-size: 0.8rem;
-  background: var(--panel-2);
+  padding: 0.28rem 0.8rem;
+  font-size: 0.82rem;
+  background: #2b2721;
   border: 1px solid var(--border);
+  border-radius: 5px;
 }
 
 .puzzle-info .status {
@@ -371,10 +553,10 @@ main {
 }
 
 #move-table-wrap {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   max-height: 60vh;
   overflow-y: auto;
 }
@@ -545,184 +727,51 @@ fieldset input[type="text"] {
    --topbar-h (bar height) and --drawer-body-h (settings panel height). Every
    rule here is gated on html.drawer-ready, which only that script sets, so a
    page where the script never ran keeps a normal, always-visible header. */
+/* ---------------------------------------------------------------------------
+   Responsive: the mock keeps the gear/account dropdowns on every width, so
+   small screens only stack the board over the side panel (plus compact
+   header/controls). The legacy drawer hooks (hidden #header-body/#topbar)
+   stay display:none. */
+.header-body {
+  display: none;
+}
+
+#builder {
+  max-width: 1080px;
+  margin: 1rem auto;
+}
+
 @media (max-width: 900px) {
-  html.drawer-ready body {
-    /* Keep the page content clear of the fixed top bar. */
-    padding-top: var(--topbar-h, 0px);
+  body {
+    padding: 0.6rem 0.5rem 1.5rem;
   }
 
-  html.drawer-ready header {
+  header {
+    flex-wrap: wrap;
+  }
+
+  header h1,
+  .app-title {
+    font-size: 1.02rem;
+  }
+
+  .menu {
     position: fixed;
-    top: 0;
-    right: 0;
-    left: 0;
-    z-index: 30;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 0;
-    padding: 0;
-    border-bottom: 0; /* the bar and the panel carry their own borders */
-    /* Closed: the panel is pushed up out of sight, which parks the top bar —
-       the header's last child — on the top edge of the screen. Open: 0. */
-    transform: translateY(var(--drawer-y, calc(-1 * var(--drawer-body-h, 0px))));
-    transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-width: none;
   }
-
-  html.drawer-ready body.drawer-open header {
-    --drawer-y: 0px;
-  }
-
-  /* Finger-tracked drag; --drawer-drag-y is set inline by layout.js. */
-  html.drawer-ready body.drawer-dragging header {
-    transition: none;
-    transform: translateY(var(--drawer-drag-y, calc(-1 * var(--drawer-body-h, 0px))));
-  }
-
-  /* While it is out the panel is modal: this backdrop dims the page and takes
-     the tap that dismisses the panel, so a stray tap cannot reach the board. */
-  html.drawer-ready body.drawer-open::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 25;
-    background: rgba(0, 0, 0, 0.35);
-  }
-
-  /* --- the fixed top bar: the handle plus the solving controls --- */
 
   .topbar {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-height: 2.6rem;
-    padding: 0.3rem 0.6rem;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .drawer-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.85rem;
-    color: var(--muted);
-    background: transparent;
-    border: 1px solid transparent;
-    /* The handle is a drag surface: the browser must not scroll instead. */
-    touch-action: none;
-    cursor: grab;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-
-  .drawer-toggle:active {
-    cursor: grabbing;
-  }
-
-  .drawer-grip {
-    width: 1.5rem;
-    height: 0.2rem;
-    border-radius: 999px;
-    background: var(--muted);
-  }
-
-  .drawer-chevron {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-right: 2px solid currentColor;
-    border-bottom: 2px solid currentColor;
-    transform: rotate(45deg) translate(-0.1rem, -0.1rem);
-    transition: transform 0.2s ease;
-  }
-
-  /* Points up once the panel is out: push the handle back up to hide it. */
-  body.drawer-open .drawer-chevron {
-    transform: rotate(-135deg) translate(-0.1rem, -0.1rem);
-  }
-
-  .topbar-actions {
-    display: flex;
-    gap: 0.4rem;
-    margin-left: auto;
-  }
-
-  .label-wide {
     display: none;
   }
 
-  .label-narrow {
-    display: inline;
-  }
-
-  /* --- the settings panel itself --- */
-
-  .header-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.5rem 0.75rem 0.7rem;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .header-body .app-title {
-    font-size: 1rem;
-  }
-
-  .header-body .app-logo {
-    width: 1.8rem;
-    height: 1.8rem;
-  }
-
-  /* One control per row, with finger-sized targets. */
-  .header-controls {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.5rem 0.75rem;
-  }
-
-  /* A set label can be long, and buttons read better full width on a phone. */
-  .header-controls > .source-picker,
-  .header-controls > .set-picker,
-  .header-controls > .difficulty-picker,
-  .header-controls > .auth-area,
-  .header-controls > button,
-  .header-controls > .score,
-  .header-controls > .help-link {
-    grid-column: 1 / -1;
-  }
-
-  .header-controls .set-picker select {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .header-controls .source-picker select,
-  .header-controls .difficulty-picker select {
-    min-width: 0;
-  }
-
-  .header-controls .auth-area {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  /* --- stacked board + side panel --- */
-
   main {
-    padding: 0.5rem 0.5rem 1.5rem;
-    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.9rem 1.1rem;
   }
 
-  /* 92vw plus the page padding has to stay inside the viewport, otherwise the
-     board would force a horizontal scrollbar on the narrowest phones. */
   .board {
     width: min(560px, 92vw);
   }
@@ -746,12 +795,10 @@ fieldset input[type="text"] {
   }
 
   fieldset {
-    min-width: 0; /* the 300px floor overflows a phone */
+    min-width: 0;
   }
 
-  /* A native file input keeps its intrinsic width otherwise and overflows
-     the fieldset ("Choose File" + "No file chosen" ≈ 270px). */
-  .file-label input[type="file"] {
+  .file-label input[type=file] {
     max-width: 100%;
   }
 }

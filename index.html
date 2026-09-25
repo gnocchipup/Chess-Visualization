@@ -7,84 +7,108 @@
     <link rel="icon" type="image/png" href="./noobvisualize.png" />
   </head>
   <body>
-    <header id="app-header">
-      <!-- Settings. On a narrow screen this panel hangs off the top of the
-           viewport and is auto-hidden behind the top bar below (see
-           src/layout.js); on a wide screen both wrappers are display: contents
-           and this is simply the header row. -->
-      <div id="header-body" class="header-body">
+    <div class="shell">
+      <header id="app-header">
         <h1 class="app-title">
-          <img class="app-logo" src="./noobvisualize.png" alt="" />
+          <span class="app-badge" aria-hidden="true">&#9823;</span>
           Chess Visualization for Noobs
         </h1>
-        <div class="header-controls">
-          <label class="source-picker">
-            Source
-            <select id="source-select"></select>
-          </label>
-          <label class="set-picker">
-            Set
-            <select id="set-select"></select>
-          </label>
-          <label class="difficulty-picker" hidden>
-            Difficulty
-            <select id="difficulty-select"></select>
-          </label>
-          <span id="auth-area" class="auth-area" hidden></span>
-          <label>
-            Ply back
-            <input id="ply-back" type="number" min="0" step="1" value="4" />
-          </label>
-          <button id="btn-builder" type="button">Puzzle sets</button>
-          <span id="score" class="score" title="Session score"></span>
-          <a class="help-link" href="./readme.html">How to use</a>
+        <div class="header-actions">
+          <div class="dropdown-wrap">
+            <button
+              id="btn-settings"
+              class="icon-btn"
+              type="button"
+              aria-expanded="false"
+              aria-controls="settings-menu"
+              title="Settings"
+            >
+              <span aria-hidden="true">&#9881;</span>
+            </button>
+            <div id="settings-menu" class="menu settings-menu" hidden>
+              <p class="menu-kicker">Puzzle source</p>
+              <label class="menu-row source-picker">
+                <span>Source</span>
+                <select id="source-select"></select>
+              </label>
+              <label class="menu-row set-picker">
+                <span>Set</span>
+                <select id="set-select"></select>
+              </label>
+              <label class="menu-row difficulty-picker" hidden>
+                <span>Difficulty</span>
+                <select id="difficulty-select"></select>
+              </label>
+              <hr class="menu-sep" />
+              <p class="menu-kicker">Display</p>
+              <label class="menu-row">
+                <span>Ply back</span>
+                <input id="ply-back" type="number" min="0" step="1" value="4" />
+              </label>
+              <hr class="menu-sep" />
+              <button id="btn-builder" class="menu-cta" type="button">Puzzle sets&hellip;</button>
+            </div>
+          </div>
+          <div class="dropdown-wrap">
+            <button
+              id="account-btn"
+              class="account-btn"
+              type="button"
+              aria-expanded="false"
+              aria-controls="account-menu"
+              title="Account"
+            >
+              <span id="account-avatar" class="avatar" aria-hidden="true">G</span>
+              <span id="account-name">Guest</span>
+              <span class="caret" aria-hidden="true">&middot;</span>
+            </button>
+            <div id="account-menu" class="menu account-menu" hidden>
+              <span id="auth-area" class="auth-area"></span>
+            </div>
+          </div>
+          <a class="icon-btn help-link" href="./readme.html" title="How to use">?</a>
         </div>
-      </div>
+      </header>
 
-      <!-- The only part of the header left on screen once the settings panel
-           is hidden, so the solving controls live here rather than inside it. -->
-      <div id="topbar" class="topbar">
-        <button
-          id="drawer-toggle"
-          class="drawer-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="header-body"
-          title="Drag or tap to show settings"
-        >
-          <span class="drawer-grip" aria-hidden="true"></span>
-          <span class="drawer-label">Settings</span>
-          <span class="drawer-chevron" aria-hidden="true"></span>
+      <div class="controls">
+        <button id="btn-new" class="btn-primary" type="button">New puzzle</button>
+        <button id="btn-reveal" type="button" disabled>
+          <span class="label-wide">Reveal solution</span>
+          <span class="label-narrow">Reveal</span>
         </button>
-        <div class="topbar-actions">
-          <button id="btn-new" type="button">New puzzle</button>
-          <button id="btn-reveal" type="button" disabled>
-            <span class="label-wide">Reveal solution</span>
-            <span class="label-narrow">Reveal</span>
-          </button>
-        </div>
       </div>
-    </header>
 
-    <div id="score-strip" class="score-strip" aria-label="Session results"></div>
+      <div id="score" class="score" title="Session score"></div>
+      <div id="score-strip" class="score-strip" aria-label="Session results"></div>
 
-    <main>
-      <section id="board-wrap">
-        <div id="board" class="board" aria-label="Chess board"></div>
-      </section>
-      <section id="side">
-        <div id="puzzle-info" class="puzzle-info">
-          <p class="muted" id="empty-state">
-            No puzzle loaded. Select or create a puzzle set, then press
-            <strong>New puzzle</strong>.
-          </p>
-        </div>
-        <div id="error-box" class="error" hidden></div>
-        <div id="move-table-wrap">
-          <table id="move-table" class="move-table"></table>
-        </div>
-      </section>
-    </main>
+      <main>
+        <section id="board-wrap">
+          <div id="board" class="board" aria-label="Chess board"></div>
+        </section>
+        <section id="side">
+          <div id="puzzle-info" class="puzzle-info">
+            <p class="muted" id="empty-state">
+              No puzzle loaded. Select or create a puzzle set, then press
+              <strong>New puzzle</strong>.
+            </p>
+          </div>
+          <div id="error-box" class="error" hidden></div>
+          <div id="move-table-wrap">
+            <table id="move-table" class="move-table"></table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Kept for backwards compatibility: narrow-screen drawer hooks and the
+         puzzle-set builder live outside the mock's card. -->
+    <div id="header-body" class="header-body" hidden>
+      <div id="topbar" class="topbar">
+        <button id="drawer-toggle" class="drawer-toggle" type="button" aria-expanded="false">
+          Settings
+        </button>
+      </div>
+    </div>
 
     <section id="builder" hidden>
       <h2>Puzzle sets</h2>

@@ -14,6 +14,12 @@ const els = {
   headerBody: $('header-body'),
   topbar: $('topbar'),
   drawerToggle: $('drawer-toggle'),
+  btnSettings: $('btn-settings'),
+  settingsMenu: $('settings-menu'),
+  accountBtn: $('account-btn'),
+  accountMenu: $('account-menu'),
+  accountAvatar: $('account-avatar'),
+  accountName: $('account-name'),
   sourceSelect: $('source-select'),
   setSelect: $('set-select'),
   difficultySelect: $('difficulty-select'),
@@ -41,16 +47,58 @@ let activeDb = null;
 let activeSetId = null;
 let busy = false;
 
-/* ---------- mobile layout ---------- */
+/* ---------- mock-shell dropdowns (settings gear + account) ---------- */
 
-// On a narrow screen the header is an auto-hidden drawer: only the top bar
-// (settings handle + solving controls) stays on screen, until this is dragged
-// down. See src/layout.js and the mobile section of src/style.css.
-const topBar = new TopBar({
-  headerEl: els.appHeader,
-  bodyEl: els.headerBody,
-  topbarEl: els.topbar,
-  handleEl: els.drawerToggle,
+// The mock moves settings into a gear dropdown and sign-in into an account
+// dropdown; the legacy narrow-screen drawer (TopBar) stays as a no-op
+// fallback only if its hidden hooks ever become visible again.
+let topBar = null;
+try {
+  if (els.headerBody && !els.headerBody.hidden) {
+    topBar = new TopBar({
+      headerEl: els.appHeader,
+      bodyEl: els.headerBody,
+      topbarEl: els.topbar,
+      handleEl: els.drawerToggle,
+    });
+  }
+} catch {
+  topBar = null;
+}
+
+function closeMenus(except = null) {
+  for (const [btn, menu] of [
+    [els.btnSettings, els.settingsMenu],
+    [els.accountBtn, els.accountMenu],
+  ]) {
+    if (!menu || menu === except) continue;
+    menu.hidden = true;
+    btn?.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function toggleMenu(btn, menu) {
+  if (!btn || !menu) return;
+  const willOpen = menu.hidden;
+  closeMenus(menu);
+  menu.hidden = !willOpen;
+  btn.setAttribute('aria-expanded', String(willOpen));
+}
+
+els.btnSettings?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleMenu(els.btnSettings, els.settingsMenu);
+});
+els.accountBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleMenu(els.accountBtn, els.accountMenu);
+});
+document.addEventListener('click', (e) => {
+  if (e.target?.closest?.('.dropdown-wrap')) return;
+  closeMenus();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeMenus();
 });
 
 const exercise = new Exercise({
@@ -102,7 +150,15 @@ function renderScore() {
   const results = settings.getResults();
   const solved = results.filter(Boolean).length;
   const failed = results.length - solved;
-  els.score.textContent = results.length ? `Solved ${solved} · Failed ${failed}` : '';
+  // Mock style: "Solved 11 · Failed 14" with bold counts.
+  els.score.innerHTML = '';
+  if (results.length) {
+    const b1 = document.createElement('b');
+    b1.textContent = String(solved);
+    const b2 = document.createElement('b');
+    b2.textContent = String(failed);
+    els.score.append('Solved ', b1, ' · Failed ', b2);
+  }
   els.scoreStrip.innerHTML = '';
   // getResults() is already capped at settings.MAX_RESULTS, so the strip and
   // the Solved/Failed counts always cover the same recent puzzles.
@@ -309,12 +365,17 @@ function applySourceVisibility() {
   const lichess = isLichessSource();
   els.setSelect.closest('.set-picker').hidden = lichess;
   els.difficultySelect.closest('.difficulty-picker').hidden = !lichess;
-  els.authArea.hidden = !lichess;
+  // Auth lives in the account dropdown now, and applies to every source
+  // (the badge in the header button mirrors the session).
+  if (els.authArea) els.authArea.hidden = false;
 }
 
-/** Render the sign-in button / username badge for the lichess source. */
+/** Render the account dropdown + header badge for the lichess session. */
 function renderAuth() {
   els.authArea.innerHTML = '';
+  const username = auth.isLoggedIn() ? auth.getUsername() || 'Lichess user' : 'Guest';
+  if (els.accountName) els.accountName.textContent = username;
+  if (els.accountAvatar) els.accountAvatar.textContent = (username[0] || 'G').toUpperCase();
   if (auth.isLoggedIn()) {
     const badge = document.createElement('span');
     badge.className = 'auth-user';
@@ -353,7 +414,8 @@ function renderAuth() {
 
 async function onNewPuzzle() {
   if (busy) return;
-  topBar.close(); // solving needs the board, not the settings
+  closeMenus();
+  topBar?.close(); // solving needs the board, not the settings
   busy = true;
   els.btnNew.disabled = true;
   els.btnNew.textContent = 'New puzzle';

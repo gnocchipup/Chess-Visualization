@@ -92,8 +92,8 @@ header h1,
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 50%;
-  background: var(--accent);
-  color: #20241a;
+  background: var(--accent-2);
+  color: #f2ecdc;
   font-weight: 700;
   font-size: 0.8rem;
   display: inline-flex;
@@ -190,7 +190,7 @@ header h1,
 
 .btn-primary,
 #btn-new {
-  background: var(--accent);
+  background: var(--accent-2);
   border: 1px solid transparent;
   color: #f2ecdc;
   font-weight: 600;
@@ -492,7 +492,7 @@ main {
 }
 
 .puzzle-info a {
-  color: var(--accent);
+  color: #8db3e2;
 }
 
 .puzzle-info .hint-line {

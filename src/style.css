@@ -10,6 +10,8 @@
   --light-sq: #ecdcb9;
   --dark-sq: #ae8a68;
   --wrong: #d05555;
+  --amber: #d9a13b;
+  --reply: #8db3e2;
   --border: #3a352f;
 }
 
@@ -389,7 +391,18 @@ main {
 }
 
 .move-table td.mv.opponent {
-  color: var(--muted);
+  color: var(--reply);
+}
+
+/* Solver's accepted moves: green first try, amber when an earlier attempt on
+   that ply had failed. Applied to the cell after the input is replaced by
+   static text, so the colour survives to the end of the puzzle. */
+.move-table td.mv.mine-first {
+  color: var(--accent);
+}
+
+.move-table td.mv.mine-recovered {
+  color: var(--amber);
 }
 
 .move-table td.mv.revealed {

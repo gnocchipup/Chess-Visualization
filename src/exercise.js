@@ -405,7 +405,11 @@ export class Exercise {
             this.attempt(i);
           }
         });
-        input.addEventListener('input', () => input.classList.remove('wrong'));
+        input.addEventListener('input', () => {
+          // Clear only the red highlight; dataset.failed (this ply failed at
+          // least once) is kept so a later accept still colours amber.
+          input.classList.remove('wrong');
+        });
         td.appendChild(input);
         this.inputEls.set(i, input);
       }
@@ -520,6 +524,8 @@ export class Exercise {
 
     const td = this.cellEls.get(solIdx);
     td.textContent = mv.san;
+    // First-try accept = green; accept after any failure on this ply = amber.
+    td.classList.add(input.dataset.failed ? 'mine-recovered' : 'mine-first');
     if (isLast) {
       this.finish();
       return;
@@ -546,6 +552,9 @@ export class Exercise {
   markWrong(input, { focus = true } = {}) {
     this.failed = true;
     input.classList.add('wrong');
+    // Remember that this ply failed at least once: a later accepted move on
+    // the same input colours amber instead of green.
+    input.dataset.failed = '1';
     if (focus) {
       input.focus();
       input.select();

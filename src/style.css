@@ -365,6 +365,11 @@ main {
 .move-table {
   border-collapse: collapse;
   width: 100%;
+  /* Fixed layout splits the two move columns equally, so the white/black
+     widths stay identical whether the solver's inputs live in the white or
+     the black column. With auto layout the input's intrinsic width (~20ch)
+     stretched whichever column held the inputs. */
+  table-layout: fixed;
   font-size: 1rem;
 }
 
@@ -394,8 +399,12 @@ main {
 
 .move-table td.mv input {
   /* Fill the cell instead of a fixed width, so the column drives the input
-     rather than the input overflowing the column. */
+     rather than the input overflowing the column. min-width: 0 neutralises
+     the input's intrinsic (~20ch) width, which otherwise stretches whichever
+     column holds the solver's inputs under auto layout. */
+  display: block;
   width: 100%;
+  min-width: 0;
   background: var(--panel-2);
 }
 

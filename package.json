@@ -7,12 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "npm run test:topbar && npm run test:ply && npm run test:loop && npm run test:orient && npm run test:drag",
+    "test": "npm run test:topbar && npm run test:next && npm run test:ply && npm run test:loop && npm run test:orient && npm run test:drag",
     "test:ply": "node scripts/verify-yh7ub.mjs",
     "test:loop": "node scripts/verify-solving.mjs",
     "test:orient": "node scripts/verify-orientation.mjs",
     "test:drag": "node scripts/verify-drag.mjs",
     "test:topbar": "node scripts/verify-topbar.mjs",
+    "test:next": "node scripts/verify-next.mjs",
     "smoke": "node scripts/smoke-preview.mjs"
   },
   "dependencies": {

@@ -18,10 +18,19 @@
           Chess Visualization for Noobs
         </h1>
         <div class="header-controls">
+          <label class="source-picker">
+            Source
+            <select id="source-select"></select>
+          </label>
           <label class="set-picker">
             Set
             <select id="set-select"></select>
           </label>
+          <label class="difficulty-picker" hidden>
+            Difficulty
+            <select id="difficulty-select"></select>
+          </label>
+          <span id="auth-area" class="auth-area" hidden></span>
           <label>
             Ply back
             <input id="ply-back" type="number" min="0" step="1" value="4" />

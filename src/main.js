@@ -5,6 +5,8 @@ import * as idb from './idb.js';
 import { openSet, randomPuzzle, inspectSet } from './sqlsets.js';
 import { buildSet, saveSqliteFile, MAX_SAFE_PUZZLES } from './builder.js';
 import { TopBar } from './layout.js';
+import { fetchNextPuzzle, NEXT_DIFFICULTIES } from './lichess.js';
+import * as auth from './auth.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -12,7 +14,10 @@ const els = {
   headerBody: $('header-body'),
   topbar: $('topbar'),
   drawerToggle: $('drawer-toggle'),
+  sourceSelect: $('source-select'),
   setSelect: $('set-select'),
+  difficultySelect: $('difficulty-select'),
+  authArea: $('auth-area'),
   plyBack: $('ply-back'),
   btnBuilder: $('btn-builder'),
   btnNew: $('btn-new'),
@@ -264,28 +269,87 @@ async function onImport() {
 
 /* ---------- wiring ---------- */
 
-els.btnNew.addEventListener('click', async () => {
+function isLichessSource() {
+  return els.sourceSelect.value === 'lichess';
+}
+
+/** Show/hide the set picker vs difficulty + sign-in row. */
+function applySourceVisibility() {
+  const lichess = isLichessSource();
+  els.setSelect.closest('.set-picker').hidden = lichess;
+  els.difficultySelect.closest('.difficulty-picker').hidden = !lichess;
+  els.authArea.hidden = !lichess;
+}
+
+/** Render the sign-in button / username badge for the lichess source. */
+function renderAuth() {
+  els.authArea.innerHTML = '';
+  if (auth.isLoggedIn()) {
+    const badge = document.createElement('span');
+    badge.className = 'auth-user';
+    badge.textContent = auth.getUsername() ? `Signed in as ${auth.getUsername()}` : 'Signed in';
+    badge.title = 'Signed in — /api/puzzle/next returns puzzles you have not seen before';
+    const btnOut = document.createElement('button');
+    btnOut.type = 'button';
+    btnOut.id = 'btn-logout';
+    btnOut.textContent = 'Sign out';
+    btnOut.addEventListener('click', async () => {
+      await auth.logout();
+      renderAuth();
+    });
+    els.authArea.append(badge, btnOut);
+  } else {
+    const btnIn = document.createElement('button');
+    btnIn.type = 'button';
+    btnIn.id = 'btn-login';
+    btnIn.textContent = 'Sign in with Lichess';
+    btnIn.title = 'Sign in so Lichess serves puzzles you have not seen (scope: puzzle:read)';
+    btnIn.addEventListener('click', async () => {
+      try {
+        await auth.beginLogin();
+      } catch (err) {
+        exercise.showError(err.message, null, { retry: false });
+      }
+    });
+    const hint = document.createElement('span');
+    hint.className = 'muted auth-hint';
+    hint.textContent = 'Optional — works signed out too (rating ~1500).';
+    els.authArea.append(btnIn, hint);
+  }
+}
+
+async function onNewPuzzle() {
   if (busy) return;
-  if (!activeDb) {
-    els.builder.hidden = false;
-    els.builderMsg.textContent = 'Create or import a puzzle set first.';
-    return;
-  }
-  const row = randomPuzzle(activeDb);
-  if (!row) {
-    els.builderMsg.textContent = 'The active set contains no puzzles.';
-    return;
-  }
   topBar.close(); // solving needs the board, not the settings
   busy = true;
   els.btnNew.disabled = true;
   try {
+    if (isLichessSource()) {
+      // One fetch per press — no prefetching or bulk download.
+      const data = await fetchNextPuzzle(settings.getDifficulty());
+      await exercise.newPuzzleFromNext(data, settings.getPlyBack(), onNewPuzzle);
+      return;
+    }
+    if (!activeDb) {
+      els.builder.hidden = false;
+      els.builderMsg.textContent = 'Create or import a puzzle set first.';
+      return;
+    }
+    const row = randomPuzzle(activeDb);
+    if (!row) {
+      els.builderMsg.textContent = 'The active set contains no puzzles.';
+      return;
+    }
     await exercise.newPuzzle(row, settings.getPlyBack());
+  } catch (err) {
+    exercise.showError(err.message, onNewPuzzle);
   } finally {
     busy = false;
     els.btnNew.disabled = false;
   }
-});
+}
+
+els.btnNew.addEventListener('click', onNewPuzzle);
 
 els.btnReveal.addEventListener('click', () => exercise.reveal());
 els.btnBuilder.addEventListener('click', () => {
@@ -304,6 +368,49 @@ els.plyBack.addEventListener('change', () => {
   settings.setPlyBack(els.plyBack.value);
   els.plyBack.value = String(settings.getPlyBack());
 });
+
+// Source picker: local puzzle sets (default, unchanged) vs Lichess next
+// puzzle (/api/puzzle/next, one fetch per New-puzzle press).
+for (const [value, label] of [['sets', 'My sets'], ['lichess', 'Lichess next']]) {
+  const opt = document.createElement('option');
+  opt.value = value;
+  opt.textContent = label;
+  els.sourceSelect.appendChild(opt);
+}
+els.sourceSelect.value = settings.getSource();
+const diffDefault = document.createElement('option');
+diffDefault.value = '';
+diffDefault.textContent = 'Default';
+els.difficultySelect.appendChild(diffDefault);
+for (const d of NEXT_DIFFICULTIES) {
+  const opt = document.createElement('option');
+  opt.value = d;
+  opt.textContent = d[0].toUpperCase() + d.slice(1);
+  els.difficultySelect.appendChild(opt);
+}
+if (NEXT_DIFFICULTIES.includes(settings.getDifficulty())) {
+  els.difficultySelect.value = settings.getDifficulty();
+}
+els.sourceSelect.addEventListener('change', () => {
+  settings.setSource(els.sourceSelect.value);
+  applySourceVisibility();
+});
+els.difficultySelect.addEventListener('change', () => {
+  settings.setDifficulty(els.difficultySelect.value);
+});
+applySourceVisibility();
+
+// OAuth callback (if returning from lichess.org/oauth) + persisted session.
+auth
+  .handleAuthCallback()
+  .then((result) => {
+    renderAuth();
+    if (result.status === 'error') exercise.showError(`Sign-in failed: ${result.error}`, null, { retry: false });
+  })
+  .catch((err) => {
+    renderAuth();
+    exercise.showError(`Sign-in failed: ${err.message}`, null, { retry: false });
+  });
 
 renderScore();
 refreshSets().catch((err) => {

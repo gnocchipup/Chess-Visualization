@@ -28,6 +28,27 @@ export function setActiveSetId(id) {
   else localStorage.setItem(KEY_ACTIVE_SET, String(id));
 }
 
+const KEY_SOURCE = NS + 'source';
+const KEY_DIFFICULTY = NS + 'difficulty';
+
+/** Puzzle source: 'sets' (local SQLite set) or 'lichess' (/api/puzzle/next). */
+export function getSource() {
+  return localStorage.getItem(KEY_SOURCE) === 'lichess' ? 'lichess' : 'sets';
+}
+
+export function setSource(value) {
+  localStorage.setItem(KEY_SOURCE, value === 'lichess' ? 'lichess' : 'sets');
+}
+
+/** Difficulty for /api/puzzle/next; '' means the Lichess default. */
+export function getDifficulty() {
+  return localStorage.getItem(KEY_DIFFICULTY) || '';
+}
+
+export function setDifficulty(value) {
+  localStorage.setItem(KEY_DIFFICULTY, typeof value === 'string' ? value : '');
+}
+
 /** Session-scoped score, persisted in localStorage: array of booleans (true = clean solve). */
 export function getResults() {
   try {

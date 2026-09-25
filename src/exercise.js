@@ -260,6 +260,29 @@ export class Exercise {
     }
   }
 
+  /**
+   * Lichess next-puzzle mode: `data` is already a PuzzleAndGame response
+   * (GET /api/puzzle/next), so there is no set row and no second fetch.
+   * `retryFn` (optional) refetches a fresh puzzle for the Retry button —
+   * retrying the same payload would just fail the same way.
+   */
+  async newPuzzleFromNext(data, plyBack, retryFn = null) {
+    this.clear();
+    this.row = null;
+    this.hideError();
+    this.tableEl.innerHTML = '';
+    try {
+      this.setup(data, plyBack);
+    } catch (err) {
+      const id = data?.puzzle?.id ?? 'next';
+      if (retryFn) {
+        this.showError(`Could not prepare puzzle ${id}: ${err.message}`, retryFn);
+      } else {
+        this.showError(`Could not prepare puzzle ${id}: ${err.message}`, null, { retry: false });
+      }
+    }
+  }
+
   setup({ game, puzzle }, plyBack) {
     const replay = new Chess();
     replay.loadPgn(game.pgn);
@@ -302,6 +325,8 @@ export class Exercise {
   /** Prefer the API solution; fall back to the CSV Moves column (strip setup ply). */
   deriveSolution(puzzle, solvingFen) {
     if (Array.isArray(puzzle.solution) && puzzle.solution.length) return puzzle.solution;
+    // `this.row` is null for /api/puzzle/next puzzles; the guard keeps the
+    // CSV fallback working for set puzzles without crashing next-mode.
     const csvMoves = (this.row?.moves || '').trim().split(/\s+/).filter(Boolean);
     // CSV Moves normally starts with the opponent's setup move, so try both
     // alignments and keep the first whose opening move is legal here.
@@ -319,11 +344,12 @@ export class Exercise {
   }
 
   renderInfo(puzzle) {
-    const id = puzzle.id ?? this.row.puzzle_id;
-    const rating = puzzle.rating ?? this.row.rating;
+    const row = this.row ?? {};
+    const id = puzzle.id ?? row.puzzle_id;
+    const rating = puzzle.rating ?? row.rating;
     const themes = Array.isArray(puzzle.themes)
       ? puzzle.themes.join(', ')
-      : String(this.row.themes || '').split(/\s+/).filter(Boolean).join(', ');
+      : String(row.themes || '').split(/\s+/).filter(Boolean).join(', ');
     this.infoEl.innerHTML = '';
     const link = document.createElement('a');
     link.href = `https://lichess.org/training/${encodeURIComponent(id)}`;
@@ -624,11 +650,16 @@ export class Exercise {
     this.onResult?.(solved);
   }
 
-  showError(message, retryFn) {
+  showError(message, retryFn, { retry = true } = {}) {
     this.errorEl.hidden = false;
     this.errorEl.innerHTML = '';
     const span = document.createElement('span');
     span.textContent = message;
+    this.errorEl.append(span);
+    if (!retry) {
+      this.revealBtn.disabled = true;
+      return;
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = 'Retry';
@@ -636,7 +667,7 @@ export class Exercise {
       this.hideError();
       retryFn?.();
     });
-    this.errorEl.append(span, btn);
+    this.errorEl.append(btn);
     this.revealBtn.disabled = true;
   }
 

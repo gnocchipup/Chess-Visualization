@@ -108,6 +108,21 @@ button:disabled {
   color: var(--muted);
 }
 
+.auth-area {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auth-user {
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.auth-hint {
+  font-size: 0.8rem;
+}
+
 .help-link {
   font-size: 0.85rem;
   color: #8db3e2;
@@ -672,7 +687,10 @@ fieldset input[type="text"] {
   }
 
   /* A set label can be long, and buttons read better full width on a phone. */
+  .header-controls > .source-picker,
   .header-controls > .set-picker,
+  .header-controls > .difficulty-picker,
+  .header-controls > .auth-area,
   .header-controls > button,
   .header-controls > .score,
   .header-controls > .help-link {
@@ -682,6 +700,18 @@ fieldset input[type="text"] {
   .header-controls .set-picker select {
     flex: 1;
     min-width: 0;
+  }
+
+  .header-controls .source-picker select,
+  .header-controls .difficulty-picker select {
+    min-width: 0;
+  }
+
+  .header-controls .auth-area {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   /* --- stacked board + side panel --- */

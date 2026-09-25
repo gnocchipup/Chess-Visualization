@@ -198,6 +198,8 @@ export class Exercise {
 
   clear() {
     this.row = null;
+    this.nextPuzzleId = null; // lichess-next id awaiting a casual report
+    this.revealed = false;
     this.chess = null;
     this.solution = null;
     this.solIdx = 0;
@@ -238,6 +240,7 @@ export class Exercise {
   async newPuzzle(row, plyBack) {
     this.clear();
     this.row = row;
+    this.nextPuzzleId = null; // set puzzles are never reported
     this.hideError();
     this.tableEl.innerHTML = '';
     this.infoEl.innerHTML = '<p class="muted">Fetching puzzle from lichess…</p>';
@@ -271,6 +274,9 @@ export class Exercise {
     this.row = null;
     this.hideError();
     this.tableEl.innerHTML = '';
+    // Id reported to Lichess on finish (casual, signed-in mode only).
+    this.nextPuzzleId = data?.puzzle?.id ?? null;
+    this.revealed = false;
     try {
       this.setup(data, plyBack);
     } catch (err) {
@@ -626,6 +632,7 @@ export class Exercise {
   reveal() {
     if (!this.solution || this.done) return;
     this.failed = true;
+    this.revealed = true; // reveals are never reported to Lichess
     for (let i = this.solIdx; i < this.solution.length; i++) {
       const mv = playUci(this.chess, this.solution[i]);
       // Reveal also grows the table: cells for unreached plies don't exist

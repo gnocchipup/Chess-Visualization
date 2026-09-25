@@ -25,7 +25,7 @@ const ACCOUNT_URL = `${LICHESS_HOST}/api/account`;
 /** Arbitrary stable public-client id — Lichess requires no registration. */
 export const CLIENT_ID = 'chess-visualization-noobs';
 /** Least privilege for the "Lichess next puzzle" source. */
-export const SCOPES = ['puzzle:read'];
+export const SCOPES = ['puzzle:read', 'puzzle:write'];
 
 const LS_TOKEN = 'cpt.lichessToken';
 const SS_VERIFIER = 'cpt.oauth.verifier';
@@ -178,6 +178,7 @@ export async function handleAuthCallback() {
     obtainedAt: Date.now(),
     expiresIn: typeof tokenJson.expires_in === 'number' ? tokenJson.expires_in : null,
     username: null,
+    scopes: Array.isArray(tokenJson.scope?.split(' ')) ? tokenJson.scope.split(' ') : [...SCOPES],
   };
   try {
     const me = await fetch(ACCOUNT_URL, {
@@ -214,6 +215,17 @@ export function isLoggedIn() {
 
 export function getUsername() {
   return session?.username ?? null;
+}
+
+/**
+ * Tokens granted before the `puzzle:write` scope was added can only read.
+ * Reporting with one fails 403, so callers check this to explain why the
+ * queue isn't advancing (fix: sign out + sign in again).
+ */
+export function hasWriteScope() {
+  if (!session) return false;
+  if (!Array.isArray(session.scopes)) return true; // restored legacy session: assume full
+  return session.scopes.includes('puzzle:write');
 }
 
 /** Revoke server-side, then forget the token locally. */

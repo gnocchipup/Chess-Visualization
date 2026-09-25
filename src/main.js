@@ -5,7 +5,7 @@ import * as idb from './idb.js';
 import { openSet, randomPuzzle, inspectSet } from './sqlsets.js';
 import { buildSet, saveSqliteFile, MAX_SAFE_PUZZLES } from './builder.js';
 import { TopBar } from './layout.js';
-import { fetchNextPuzzle, NEXT_DIFFICULTIES } from './lichess.js';
+import { fetchNextPuzzle, reportResult, NEXT_DIFFICULTIES } from './lichess.js';
 import * as auth from './auth.js';
 
 const $ = (id) => document.getElementById(id);
@@ -62,8 +62,42 @@ const exercise = new Exercise({
   onResult: (solved) => {
     settings.pushResult(solved);
     renderScore();
+    // Signed-in Lichess-next mode: report casual results to advance the
+    // server queue (POST /api/puzzle/batch/mix, rated:false). Anonymous
+    // mode has no queue, so nothing is reported. Reveals are deliberately
+    // NOT reported (user choice) — skipping ahead then needs one extra
+    // New-puzzle press, which is the honest trade-off.
+    if (settings.getSource() === 'lichess' && !exercise.revealed && exercise.nextPuzzleId) {
+      const id = exercise.nextPuzzleId;
+      exercise.nextPuzzleId = null; // consume: report each puzzle at most once
+      if (!auth.hasWriteScope()) {
+        exercise.showError(
+          'This sign-in is read-only (missing puzzle:write). Sign out and sign in again, then each solved puzzle advances the queue.',
+          null,
+          { retry: false }
+        );
+        return;
+      }
+      reportResult(id, solved)
+        .then((next) => {
+          if (next) {
+            pendingNext = next;
+            els.btnNew.disabled = false;
+            els.btnNew.textContent = 'New puzzle ✓';
+          }
+        })
+        .catch((err) => {
+          // Non-fatal: the queue just doesn't advance; next press refetches.
+          exercise.showError(`Could not report result: ${err.message}`, null, { retry: false });
+        });
+    }
   },
 });
+
+// Fresh puzzle prefetched alongside the casual report (nb=1). Shown on the
+// next New-puzzle press instead of fetching — still one puzzle per action,
+// it just arrives bundled with the report response.
+let pendingNext = null;
 
 /* ---------- score strip ---------- */
 
@@ -288,7 +322,9 @@ function renderAuth() {
     const badge = document.createElement('span');
     badge.className = 'auth-user';
     badge.textContent = auth.getUsername() ? `Signed in as ${auth.getUsername()}` : 'Signed in';
-    badge.title = 'Signed in — /api/puzzle/next returns puzzles you have not seen before';
+    badge.title = auth.hasWriteScope()
+      ? 'Signed in — solving reports casual results so each New puzzle is fresh (rated:false, rating untouched)'
+      : 'Signed in (read-only) — please sign out and sign in again to enable fresh puzzles (adds puzzle:write)';
     const btnOut = document.createElement('button');
     btnOut.type = 'button';
     btnOut.id = 'btn-logout';
@@ -323,10 +359,13 @@ async function onNewPuzzle() {
   topBar.close(); // solving needs the board, not the settings
   busy = true;
   els.btnNew.disabled = true;
+  els.btnNew.textContent = 'New puzzle';
   try {
     if (isLichessSource()) {
-      // One fetch per press — no prefetching or bulk download.
-      const data = await fetchNextPuzzle(settings.getDifficulty());
+      // Prefer the puzzle bundled with the last casual report (nb=1) —
+      // otherwise one fetch per press. Never prefetch or bulk-download.
+      const data = pendingNext ?? (await fetchNextPuzzle(settings.getDifficulty()));
+      pendingNext = null;
       await exercise.newPuzzleFromNext(data, settings.getPlyBack(), onNewPuzzle);
       return;
     }

@@ -81,7 +81,8 @@ export class Exercise {
     this.promoEl.appendChild(panel);
     document.body.appendChild(this.promoEl);
     // Clicking the dimmed area outside the panel cancels the gesture without
-    // a failed attempt, matching how an illegal drag is ignored.
+    // a failed attempt: no piece was named, so no move was claimed. (This is
+    // unlike an illegal board drop, which does fail — see attempt().)
     this.promoEl.addEventListener('pointerdown', (e) => {
       if (e.target === this.promoEl) this.closePromotion();
     });
@@ -114,11 +115,24 @@ export class Exercise {
       this.dragFrom = null;
       this.dragMoved = false;
       const to = this.squareAt(e.clientX, e.clientY);
-      if (moved && to && to !== from) {
+      if (moved) {
+        if (!to || to === from) {
+          // Drag released back on its start square, or thrown off the board:
+          // the solver cancelled, not attempted. Keep the tap selection (if
+          // any) as it was — for a fresh drag there is none, so just hide.
+          if (this.selected) this.parkChip(this.selected);
+          else this.hideChip();
+          return;
+        }
         // Drag released on a different square: submit from -> to.
         this.selected = null;
         this.hideChip();
         this.attemptDrag(from, to);
+      } else if (!to) {
+        // Press-and-release off the board (e.g. a tap that drifted outside
+        // without leaving the start square's slop): nothing was named.
+        if (this.selected) this.parkChip(this.selected);
+        else this.hideChip();
       } else if (this.selected && this.selected !== from) {
         // Tap-tap: a square was already selected, this tap is the target.
         const sel = this.selected;
@@ -478,10 +492,16 @@ export class Exercise {
         mv = this.chess.move(raw, { strict: false });
       }
     } catch {
-      // Typed garbage is a failed attempt. An illegal drag (no such legal
-      // move) is ignored silently instead — a slipped finger should not fail
-      // the puzzle, matching how lichess treats impossible board gestures.
-      if (!drag) this.markWrong(input);
+      // Typed garbage is a failed attempt, and so is an illegal board
+      // gesture (no such legal move): landing the chip on a different square
+      // claims "I see this move", so a claimed non-move is a visualization
+      // failure. Only dropping back on the start square, or throwing the chip
+      // off the board, cancels without failing — those paths never reach
+      // attempt(). The illegal from-to (no SAN exists) is written into the
+      // input, e.g. "e2-e5", so the feedback parallels the SAN shown for a
+      // legal-but-wrong drag.
+      if (drag) input.value = `${drag.from}-${drag.to}`;
+      this.markWrong(input, { focus: !drag });
       return;
     }
 

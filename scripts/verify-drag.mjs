@@ -20,7 +20,9 @@ function dragDescriptor(chess, from, to, promotion) {
   return { from, to, promotion: needsChoice ? promotion : undefined };
 }
 
-// Same acceptance predicate as the drag branch of exercise.js attempt()
+// Same acceptance predicate as the drag branch of exercise.js attempt(),
+// plus the failed-attempt echo: an illegal from-to has no SAN, so the input
+// shows "from-to" (e.g. "e2-e5"), matching the user's choice of feedback.
 function tryDragAttempt(chess, solution, solIdx, from, to, promotion) {
   const desc = dragDescriptor(chess, from, to, promotion);
   if (!desc) return { accepted: false, cancelled: true };
@@ -28,7 +30,7 @@ function tryDragAttempt(chess, solution, solIdx, from, to, promotion) {
   try {
     mv = chess.move(desc);
   } catch {
-    return { accepted: false, illegal: true };
+    return { accepted: false, illegal: true, inputValue: `${from}-${to}` };
   }
   const uci = mv.from + mv.to + (mv.promotion || '');
   const isLast = solIdx === solution.length - 1;
@@ -60,10 +62,13 @@ r = tryDragAttempt(chess, solution, 2, 'h3', 'h4'); // Qh4, not the solution
 check('wrong drag h3->h4 rejected', !r.accepted && !r.illegal);
 check('position unchanged after wrong drag', chess.fen() === fenBefore);
 
-// 3. Illegal drag is ignored silently (no failure, no position change).
+// 3. Illegal drag is a failed attempt (visualization failure): the illegal
+// from-to (no SAN exists) is written into the active input, e.g. "e4-e5",
+// and the position is unchanged.
 r = tryDragAttempt(chess, solution, 2, 'e4', 'e5'); // empty square
 check('illegal drag reported as illegal, not accepted', r.illegal && !r.accepted);
 check('position unchanged after illegal drag', chess.fen() === fenBefore);
+check('illegal drag echoes from-to into the input', r.inputValue === 'e4-e5');
 
 // 4. Scripted final move by drag (mate) accepted.
 r = tryDragAttempt(chess, solution, 2, 'h3', 'g2');

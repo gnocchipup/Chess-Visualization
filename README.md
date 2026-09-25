@@ -99,7 +99,10 @@ Pick a set in the header and press **New puzzle**. Each puzzle is fetched live f
   move attempt as typing, e.g. dragging `g8`→`g7` is exactly typing `Rg7`. A dragged pawn reaching
   the back rank opens a promotion picker: choose the piece in the dialog — there is no default, and
   picking the wrong piece is a failed attempt just like a wrong typed move.
-  An impossible drag (no such legal move) is ignored silently rather than failing the puzzle.
+  Landing the chip on a different square is always a move claim: if no such legal move exists it is
+  a failed attempt too (a visualization failure), with the `from-to` (e.g. `e2-e5`) shown in red in
+  the active input. To cancel a gesture instead, drop the chip back on its start square or throw it
+  off the board — only those paths attempt nothing.
 - **Correct** → the move becomes static text and the opponent's reply is filled in immediately, with
   no delay. Focus advances to your next input.
 - **Incorrect** → the text turns red, stays put, and the puzzle is marked failed for scoring. You can

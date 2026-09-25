@@ -118,6 +118,9 @@ const exercise = new Exercise({
     if (settings.getSource() === 'lichess' && !exercise.revealed && exercise.nextPuzzleId) {
       const id = exercise.nextPuzzleId;
       exercise.nextPuzzleId = null; // consume: report each puzzle at most once
+      // Guests have no server queue — a fresh puzzle arrives on every
+      // New-puzzle press, so there is nothing to report and no message.
+      if (!auth.isLoggedIn()) return;
       if (!auth.hasWriteScope()) {
         exercise.showError(
           'This sign-in is read-only (missing puzzle:write). Sign out and sign in again, then each solved puzzle advances the queue.',

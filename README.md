@@ -90,8 +90,9 @@ An in-memory sql.js database gets uncomfortable past ~50,000 puzzles, so the bui
 Pick a set in the header and press **New puzzle**. Each puzzle is fetched live from the Lichess API.
 
 - **Ply back** (default 4) controls how much of the game's run-up is shown as read-only context.
-- The **move table** lists context moves in standard `N. white black` layout. The cell for the move
-  you're solving is a text input; every other cell is static text.
+- The **move table** lists context moves in standard `N. white black` layout, plus one text input
+  for the move you're currently solving. Future moves get no row, cell, or input until you reach
+  them, so the table never hints at how long the solution is.
 - Type your move in **SAN** and press **Enter**. Input is deliberately lenient — a missing or extra
   trailing `+` / `#` is accepted, but genuinely ambiguous or unparseable input is rejected.
 - Or **drag from square to square** (mouse or touch; tap-tap works too — tap the from-square, then
@@ -103,8 +104,9 @@ Pick a set in the header and press **New puzzle**. Each puzzle is fetched live f
   a failed attempt too (a visualization failure), with the `from-to` (e.g. `e2-e5`) shown in red in
   the active input. To cancel a gesture instead, drop the chip back on its start square or throw it
   off the board — only those paths attempt nothing.
-- **Correct** → the move becomes static text and the opponent's reply is filled in immediately, with
-  no delay. Focus advances to your next input.
+- **Correct** → the move becomes static text (green first try, amber if that ply failed before) and
+  the opponent's reply appears below in blue, with no delay. Focus advances to your next input,
+  which is created only then.
 - **Incorrect** → the text turns red, stays put, and the puzzle is marked failed for scoring. You can
   retry.
 - On the **final ply**, any legal move that delivers checkmate is accepted, not just the scripted one.

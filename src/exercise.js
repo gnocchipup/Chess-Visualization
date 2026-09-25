@@ -205,6 +205,8 @@ export class Exercise {
     this.done = false;
     this.cellEls = new Map();
     this.inputEls = new Map();
+    this.rowsByNum = new Map();
+    this.tbodyEl = null;
     this.boardFen = null;
     this.orientation = WHITE;
     this.solverColor = null;
@@ -353,17 +355,76 @@ export class Exercise {
   }
 
 
+  /** Return the cell for a solution index, creating its row on demand. */
+  solutionCell(i) {
+    const ply = this.initialPly + 1 + i;
+    const num = Math.floor(ply / 2) + 1;
+    if (!this.rowsByNum.has(num)) {
+      const tr = document.createElement('tr');
+      const tdNum = document.createElement('td');
+      tdNum.className = 'num';
+      tdNum.textContent = `${num}.`;
+      const tdW = document.createElement('td');
+      tdW.className = 'mv';
+      const tdB = document.createElement('td');
+      tdB.className = 'mv';
+      tr.append(tdNum, tdW, tdB);
+      this.tbodyEl.appendChild(tr);
+      this.rowsByNum.set(num, { white: tdW, black: tdB });
+    }
+    const td = this.rowsByNum.get(num)[ply % 2 === 0 ? 'white' : 'black'];
+    this.cellEls.set(i, td);
+    return td;
+  }
+
+  /**
+   * Create the solver input for a solution index. The input's keydown handler
+   * closes over its own index, so no stale `disabled` juggling is needed —
+   * exactly one input exists per reached ply.
+   */
+  addSolverInput(i) {
+    const existing = this.inputEls.get(i);
+    if (existing) return existing;
+    const ply = this.initialPly + 1 + i;
+    const td = this.solutionCell(i);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.autocomplete = 'off';
+    input.autocapitalize = 'off';
+    input.spellcheck = false;
+    input.placeholder = '…';
+    input.setAttribute(
+      'aria-label',
+      `Your move ${Math.floor(ply / 2) + 1}${ply % 2 === 0 ? '.' : '...'}`
+    );
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.attempt(i);
+      }
+    });
+    input.addEventListener('input', () => {
+      // Clear only the red highlight; dataset.failed (this ply failed at
+      // least once) is kept so a later accept still colours amber.
+      input.classList.remove('wrong');
+    });
+    td.appendChild(input);
+    this.inputEls.set(i, input);
+    return input;
+  }
+
   renderTable() {
     this.tableEl.innerHTML = '';
     this.cellEls.clear();
     this.inputEls.clear();
-    const tbody = document.createElement('tbody');
-    const rowsByNum = new Map();
+    this.rowsByNum = new Map();
+    this.tbodyEl = document.createElement('tbody');
+    const tbody = this.tbodyEl;
 
     const cellFor = (ply) => {
       const num = Math.floor(ply / 2) + 1;
       const isWhite = ply % 2 === 0;
-      if (!rowsByNum.has(num)) {
+      if (!this.rowsByNum.has(num)) {
         const tr = document.createElement('tr');
         const tdNum = document.createElement('td');
         tdNum.className = 'num';
@@ -374,9 +435,9 @@ export class Exercise {
         tdB.className = 'mv';
         tr.append(tdNum, tdW, tdB);
         tbody.appendChild(tr);
-        rowsByNum.set(num, { white: tdW, black: tdB });
+        this.rowsByNum.set(num, { white: tdW, black: tdB });
       }
-      return rowsByNum.get(num)[isWhite ? 'white' : 'black'];
+      return this.rowsByNum.get(num)[isWhite ? 'white' : 'black'];
     };
 
     // Read-only lead-up context rows.
@@ -384,36 +445,11 @@ export class Exercise {
       cellFor(m.ply).textContent = m.san;
     }
 
-    // Solution rows: solver plies are inputs, opponent plies are filled on reply.
-    this.solution.forEach((uci, i) => {
-      const ply = this.initialPly + 1 + i;
-      const td = cellFor(ply);
-      this.cellEls.set(i, td);
-      if (i % 2 === 0) {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.autocomplete = 'off';
-        input.spellcheck = false;
-        input.setAttribute(
-          'aria-label',
-          `Your move ${Math.floor(ply / 2) + 1}${ply % 2 === 0 ? '.' : '...'}`
-        );
-        input.disabled = i !== 0;
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            this.attempt(i);
-          }
-        });
-        input.addEventListener('input', () => {
-          // Clear only the red highlight; dataset.failed (this ply failed at
-          // least once) is kept so a later accept still colours amber.
-          input.classList.remove('wrong');
-        });
-        td.appendChild(input);
-        this.inputEls.set(i, input);
-      }
-    });
+    // Only the first solver ply is shown; each accepted move appends the
+    // reply (and the next input) below, so the table grows one step at a
+    // time and never hints at the total solution length. Later plies get no
+    // row, no cell, and no input until they are reached.
+    this.addSolverInput(0);
 
     this.tableEl.appendChild(tbody);
     // Focus the first solution cell only where a keyboard is already there.
@@ -531,9 +567,10 @@ export class Exercise {
       return;
     }
 
-    // Opponent replies immediately, no delay.
+    // Opponent replies immediately, no delay — and only now is its cell (and
+    // the next solver input) created, so the table grows one row at a time.
     const reply = playUci(this.chess, this.solution[solIdx + 1]);
-    const replyTd = this.cellEls.get(solIdx + 1);
+    const replyTd = this.solutionCell(solIdx + 1);
     replyTd.textContent = reply.san;
     replyTd.classList.add('opponent');
 
@@ -542,8 +579,7 @@ export class Exercise {
       this.finish();
       return;
     }
-    const next = this.inputEls.get(this.solIdx);
-    next.disabled = false;
+    const next = this.addSolverInput(this.solIdx);
     // Drag input must not grab focus: on mobile that would pop the keyboard
     // up over the board after every move.
     if (!drag) next.focus();
@@ -566,7 +602,10 @@ export class Exercise {
     this.failed = true;
     for (let i = this.solIdx; i < this.solution.length; i++) {
       const mv = playUci(this.chess, this.solution[i]);
-      const td = this.cellEls.get(i);
+      // Reveal also grows the table: cells for unreached plies don't exist
+      // yet, so create rows/inputs on demand before overwriting them.
+      if (i % 2 === 0) this.addSolverInput(i);
+      const td = this.solutionCell(i);
       td.textContent = mv.san;
       td.classList.add('revealed');
     }

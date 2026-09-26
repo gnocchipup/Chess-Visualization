@@ -66,6 +66,14 @@ colour circles, the board's `title` and `aria-label`, and the red `data-flipped`
 `Exercise.paintBoard()` repaints **all** of it in one call, so a turned board can never
 leave stale chrome pointing the wrong way.
 
+**The flip state is shown as a blue/red pair, in two places, from one attribute.** The
+button beside *New puzzle* is the bare ⇅ sign with no label at any width, so colour is
+its only state channel: `#btn-flip` is blue (`--accent-2`) and `#btn-flip[aria-pressed="true"]`
+is red (`--wrong`). The two colour circles use the same pair (blue halo, red ring) via
+`data-flipped`. JS only ever writes `aria-pressed` (`renderFlipState`); CSS reads it. The
+one hardcoded part is JS: the `title` text, which `renderFlipState` swaps to "Unflip…".
+Green (`--accent`) is reserved for *correct* — never use it to mean "flipped".
+
 
 ## Pattern 3 — The board is static; gestures are input, not animation
 
@@ -243,6 +251,13 @@ results accumulated under a different source/set/difficulty/lead-up are not comp
 the new one. Source is on the list because switching `My sets` ↔ `Lichess next` swaps the
 entire puzzle pool, and the difficulty selector only means anything relative to the current
 source — a set swap and a source swap are the same kind of event.
+
+The same `resetScore()` is also the body of the **`#btn-reset-score` button** (↺ Reset session)
+on the score row, so "start a new session" is explicit rather than only a side effect of
+changing a setting. `renderScore()` is the one place that knows whether there is anything to
+clear, and it drives the button's `disabled` from `results.length === 0` — a click that would
+do nothing is never offered. Adding a fifth way to clear the counter must go through
+`resetScore()`, never straight to `settings.clearResults()`.
 
 Two rules keep it from firing spuriously: the set handler resets only when the id actually
 differs from `activeSetId`, and the source/difficulty/ply handlers compare before/after

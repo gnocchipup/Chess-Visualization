@@ -271,23 +271,26 @@ header h1,
   color: var(--text);
 }
 
-/* Board flip: a secondary action beside "New puzzle" (the F shortcut it mirrors
-   does not exist on a touch keyboard). Its pressed state is the semantic half of
-   the flipped indicator; the board frame's red-ringed colour circles are the
-   visual half. */
+/* Board flip: an icon-only button beside "New puzzle" (the F shortcut it mirrors
+   does not exist on a touch keyboard). The sign is the whole label, so its colour
+   is the state — blue for the default (auto) orientation, red while the board is
+   flipped — the same pair as the haloes on the board frame's colour circles. The
+   pressed state stays semantic (aria-pressed); this rule reads it. */
 #btn-flip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  color: var(--text);
+  justify-content: center;
+  min-width: 2.7rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(76, 115, 158, 0.16);
+  border: 1px solid var(--accent-2);
+  color: var(--accent-2);
 }
 
 #btn-flip[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(127, 166, 80, 0.16);
+  background: rgba(208, 85, 85, 0.16);
+  border-color: var(--wrong);
+  color: var(--wrong);
 }
 
 label {
@@ -348,6 +351,49 @@ button:disabled {
 .score b {
   color: var(--text);
   font-weight: 700;
+}
+
+/* The Solved/Failed counts and the reset button share one row, so the pair stays
+   centred exactly where the score text used to sit on its own. The score itself
+   keeps its own rule above and only loses the padding, now that the row carries
+   it — which also means the row is a hair taller than an empty score line was,
+   whether or not any puzzle has been solved yet. */
+.score-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem 0;
+}
+
+.score-row .score {
+  padding: 0;
+}
+
+/* Wipe the session counter. Deliberately quiet: it destroys data, so it must not
+   compete with "New puzzle", and it is disabled while there is nothing to clear
+   (main.js renderScore). The ↺ sign is the only part that survives the narrow
+   label swap, and the button keeps a real label for assistive tech. */
+#btn-reset-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+#btn-reset-score:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+#btn-reset-score .reset-icon {
+  font-size: 1.1em;
+  line-height: 1;
 }
 
 .auth-area {
@@ -617,11 +663,13 @@ main {
   background: var(--dark-sq);
 }
 
-/* The ⇅ glyph shared by the Flip button's label. The flipped state is shown on
-   the board itself by the two colour circles' red outlines (see
-   .side-dot[data-flipped="true"] above). */
+/* The ⇅ sign — the whole content of the Flip button. Its colour comes from
+   #btn-flip above (blue by default, red while flipped); the board shows the same
+   state through the two colour circles' outlines (.side-dot[data-flipped]).
+   Slightly larger than the text it replaces, so a bare sign still reads at a
+   glance and is a comfortable touch target. */
 .flip-icon {
-  font-size: 1.05em;
+  font-size: 1.35em;
   line-height: 1;
 }
 

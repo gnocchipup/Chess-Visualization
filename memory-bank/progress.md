@@ -71,6 +71,10 @@ working tree clean apart from the untracked `.clinerules/` folder.
 - [x] Fixed-width markers (`flex: 0 0 auto; width: 14px`) — no longer `flex: 1 1 0`, which
       re-divided the full row width on every new result
 - [x] Counter resets when puzzle source, puzzle set, Lichess difficulty, or ply back changes
+- [x] Dedicated **↺ Reset session** button on the score row (same `resetScore()` path), disabled
+      when there is nothing to clear; label narrows to "Reset" under 900 px
+- [x] *Beyond spec:* flip button reduced to the ⇅ sign alone and recoloured **blue = unflipped
+      (default) / red = flipped**, matching the colour circles' haloes
 
 ### Gotcha handling — **all seven**
 

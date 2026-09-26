@@ -14,12 +14,14 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
 - **Solving screen** — a static board, a PGN-style move table, and SAN entry for the solution, plus
   square-to-square drag/tap input that works with mouse and touch.
 - **Board orientation** — flipped automatically when the puzzle is for the black side, and flippable by
-  hand (**F**, or the **Flip board** button beside *New puzzle*, which is how touch screens reach it).
-  A manual flip is remembered, so the next puzzle starts the same way round.
+  hand (**F**, or the **⇅** button beside *New puzzle*, which is how touch screens reach it). The button
+  is the sign alone: **blue** while the board is unflipped (the default), **red** once you turn it. A
+  manual flip is remembered, so the next puzzle starts the same way round.
 - **Board coordinates** — file letters along the bottom edge and rank numbers down the right edge, with
   a small circle above and below the board naming the colour at each end (light = white, dark = black).
   Coordinates and circles both follow a flip, so the labels always name the squares they sit beside.
-- **Session scoring** — a Lichess-style strip of green/red squares.
+- **Session scoring** — a Lichess-style strip of green/red squares, with a **↺ Reset session** button beside
+  the `Solved · Failed` counts.
 - **Spoiler-safe hints** — the puzzle's rating and themes stay hidden behind a **Hint** button; the
   **Reveal solution** button only appears once you've asked for a hint.
 - **Small-screen layout** — below 900 px the board and the side panel stack, and the header
@@ -135,22 +137,25 @@ board is flipped automatically** so black is at the bottom.
 > **opponent's**, not the solver's. Orienting by the CSV FEN is therefore wrong by exactly one ply
 > on every puzzle. `scripts/verify-orientation.mjs` pins this.
 
-Press **F** — or **Flip board**, the button beside **New puzzle** that gives touch screens the same
-control — to flip the board 180° at any time. The shortcut is ignored while you're typing in a move
-cell, so it can never swallow a keystroke meant for a solution attempt.
+Press **F** — or the **⇅** button beside **New puzzle**, which gives touch screens the same control — to
+flip the board 180° at any time. The button carries no label at any width: the sign *is* the label, so
+its colour carries the state, **blue** while the board is unflipped (the default) and **red** once
+flipped. The shortcut is ignored while you're typing in a move cell, so it can never swallow a
+keystroke meant for a solution attempt.
 
 The board is framed by its coordinates: **file letters along the bottom edge** and **rank numbers down
 the right edge**, both outside the playing area so they never cover a piece. A small coloured circle
 sits above the board and another below it, naming the colour at each end — light for white, dark for
 black — so you can see at a glance which side is which way round. Everything in the frame follows the
 orientation: flipping turns the letters round (`a`–`h` becomes `h`–`a`), reverses the numbers, and
-swaps the two circles, so each label always names the square it sits beside. While the board is
-flipped, both circles also get a red outline, so the state shows right in the board frame.
+swaps the two circles, so each label always names the square it sits beside. Both circles wear a
+**blue halo** by default and turn **red** while the board is flipped, so the state shows right in the
+board frame.
 
 Flipping only re-orients the static board: it does not change the position or the solving state. The
 flip is a **persisted preference** (`cpt.flipped`), so the next puzzle starts the same way round —
 flipped relative to *that* puzzle's auto-detected orientation, whichever colour it is for. While it
-is on, the button reads as pressed and the two colour circles ring red, so a turned
+is on, the sign turns red and the two colour circles ring red, so a turned
 board is never a surprise; flipping back to the default clears both.
 
 #### Small screens
@@ -158,7 +163,7 @@ board is never a surprise; flipping back to the default clears both.
 Below 900 px wide the board and the side panel stack, and the header compacts its labels (smaller
 title and logo) so the settings and puzzle link still fit on one row. The move table is capped at
 45 vh so a long solution can't push the controls off-screen — **New puzzle** sits directly beneath
-it with **Flip** (shortened from *Flip board*) beside it, and the hint line (with **Reveal**
+it with the bare **⇅** flip sign beside it, and the hint line (with **Reveal**
 shortened from *Reveal solution*) stays just above.
 
 The solution cell is only auto-focused when a keyboard and fine pointer are detected; on touch
@@ -170,6 +175,10 @@ A session-scoped strip of small fixed-width bars: **green** = solved with no wro
 at least one wrong attempt. Each bar is the same short width regardless of how many exist, so the strip
 fills from the left instead of re-dividing the row on every new result. The header shows running
 `Solved · Failed` counts, and only the most recent 25 results are kept and displayed.
+
+**↺ Reset session**, beside those counts, clears them on demand. It shares the single `resetScore()`
+path in `main.js` with the setting handlers below, and is disabled while there is nothing to clear — so a
+click that would do nothing is never offered.
 
 The counter is scoped to the *current configuration*: changing the puzzle **source** (My sets ↔
 Lichess next), the **puzzle set**, the Lichess **difficulty**, or **ply back** clears the results and

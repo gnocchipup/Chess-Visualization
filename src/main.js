@@ -38,6 +38,7 @@ const els = {
   dotBottom: $('board-dot-bottom'),
   score: $('score'),
   scoreStrip: $('score-strip'),
+  btnResetScore: $('btn-reset-score'),
   builder: $('builder'),
   csvFile: $('csv-file'),
   ratingMin: $('rating-min'),
@@ -195,6 +196,9 @@ function renderScore() {
   const results = settings.getResults();
   const solved = results.filter(Boolean).length;
   const failed = results.length - solved;
+  // Nothing recorded means nothing to clear, so say so on the reset button
+  // rather than offer a click that does nothing.
+  els.btnResetScore.disabled = results.length === 0;
   // Mock style: "Solved 11 · Failed 14" with bold counts.
   els.score.innerHTML = '';
   if (results.length) {
@@ -216,25 +220,31 @@ function renderScore() {
 }
 
 /**
- * Clear the correct/incorrect session counter. Changing what is being solved —
- * the puzzle source or set, the Lichess difficulty, or how much lead-up is
- * shown (ply back) — starts a new session, so results from the previous
- * configuration would otherwise be carried into the new one and misread as
- * its accuracy.
+ * Clear the correct/incorrect session counter. Two things reach it: the reset
+ * button beside the score (the explicit "start a new session"), and every
+ * setting that changes *what* is being solved — the puzzle source or set, the
+ * Lichess difficulty, or how much lead-up is shown (ply back). Results from the
+ * previous configuration would otherwise be carried into the new one and misread
+ * as its accuracy.
  */
 function resetScore() {
   settings.clearResults();
   renderScore();
 }
 
+// The dedicated reset: clearing the counter should not require changing a
+// setting first. renderScore() disables the button while there is nothing to do.
+els.btnResetScore.addEventListener('click', resetScore);
+
 /* ---------- board flip ---------- */
 
 /**
- * Mirror the flip preference onto the flip button. The button carries the state
- * semantically (aria-pressed) and visually; on the board frame itself the two
- * colour circles turn their outlines red (see Exercise.paintSideDot), so the
- * flipped state stays obvious once the button has scrolled out of view under a
- * long move table.
+ * Mirror the flip preference onto the flip button. The button is only the ⇅ sign,
+ * so the state travels on aria-pressed: CSS paints that sign blue for the default
+ * (auto) orientation and red while the board is flipped, matching the two colour
+ * circles on the board frame (see Exercise.paintSideDot), which also turn their
+ * outlines red — so the state stays obvious once the button has scrolled out of
+ * view under a long move table.
  */
 function renderFlipState(flipped) {
   els.btnFlip.setAttribute('aria-pressed', String(flipped));

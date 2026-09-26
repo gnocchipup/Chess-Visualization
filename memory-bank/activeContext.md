@@ -6,10 +6,18 @@ The memory bank was **initialized on 2026-09-27** by reading the entire codebase
 (`index.html`, all 13 `src/` modules, all 9 `scripts/`, `README.md`, `specs.md`,
 `vite.config.js`, `package.json`, the deploy workflow) and the git history.
 
-**No feature work is in progress.** Polish continues: the latest change made the score
-strip markers fixed-width (no more re-dividing the row per result) and reset the
-correct/incorrect counter whenever puzzle source, puzzle set, difficulty, or ply back
-changes.
+**No feature work is in progress.** Polish continues. Latest change: the correct/incorrect
+counter got a dedicated **↺ Reset session** button on the score row (it shares the one
+`resetScore()` path with the setting handlers, and is disabled while nothing is recorded),
+and the **flip button is now the ⇅ sign alone** — coloured **blue when unflipped (the
+default) and red when flipped**, the same pair as the haloes on the board's two colour
+circles. Before that, the score strip markers were made fixed-width and the counter started
+resetting whenever puzzle source, puzzle set, difficulty, or ply back changed.
+
+Verified live in headless Chrome over CDP (not committed, since the repo has no browser-test
+harness): sign-only at 1200 px and 600 px, blue→red→blue on click, `aria-pressed` and
+`cpt.flipped` round-trip, reset disabled/enabled/clears/disables across a reload. `npm run
+build`, the three offline tests and `npm run smoke` all pass.
 
 ## Recent changes (most recent first, from git log)
 

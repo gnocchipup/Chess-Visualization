@@ -92,7 +92,24 @@
         </div>
       </header>
 
-      <div id="score" class="score" title="Session score"></div>
+      <!-- Session score row: the Solved/Failed counts plus a dedicated reset.
+             Changing anything that changes *what* is being solved (source, set,
+             difficulty, ply back) already starts a new session by itself — see
+             resetScore() in src/main.js — so this button is the manual way to do
+             the same thing without touching a setting. It is disabled while there
+             is nothing to clear. -->
+      <div class="score-row">
+        <div id="score" class="score" title="Session score"></div>
+        <button
+          id="btn-reset-score"
+          type="button"
+          title="Reset the session counter (Solved / Failed and the strip below)"
+        >
+          <span class="reset-icon" aria-hidden="true">&#8634;</span>
+          <span class="label-wide">Reset session</span>
+          <span class="label-narrow">Reset</span>
+        </button>
+      </div>
       <div id="score-strip" class="score-strip" aria-label="Session results"></div>
 
       <main>
@@ -133,17 +150,18 @@
             <button id="btn-new" class="btn-primary" type="button">New puzzle</button>
             <!-- Board flip sits beside the primary action because the F shortcut
                  is out of reach on a phone: the state is persisted (cpt.flipped)
-                 so the next puzzle starts the same way round, and the two colour
-                 circles in the board frame turn their outlines red while it is on. -->
+                 so the next puzzle starts the same way round. The button is the
+                 bare sign — its colour carries the state, blue for the default
+                 (auto) orientation and red while the board is flipped, the same
+                 pair as the two colour circles in the board frame. -->
             <button
               id="btn-flip"
               type="button"
               aria-pressed="false"
+              aria-label="Flip the board"
               title="Flip the board 180&deg; (F) &mdash; remembered for the next puzzle"
             >
               <span class="flip-icon" aria-hidden="true">&#8645;</span>
-              <span class="label-wide">Flip board</span>
-              <span class="label-narrow">Flip</span>
             </button>
             <!-- Moved into the hint line by exercise.js renderInfo() and only
                  revealed once the solver asks for a hint. -->

@@ -148,14 +148,17 @@
           numbers down the right edge, with a small circle above and below the
           board naming the colour at each end (light = white, dark = black).
           They always follow the board, so a flipped board renames its own
-          squares. While flipped, both circles also get a red outline.
+          squares. Both circles carry a blue halo by default, and both turn red
+          while the board is flipped.
         </li>
         <li>
           The board flips automatically when you are solving as black. Press
-          <strong>F</strong> &mdash; or <strong>Flip board</strong>, the button
-          beside <strong>New puzzle</strong> &mdash; to turn it yourself; the two
-          colour circles around the board turn their outlines red while the
-          board is turned.
+          <strong>F</strong> &mdash; or the <strong>&#8645;</strong> button beside
+          <strong>New puzzle</strong>, which shows only the sign &mdash; to turn
+          it yourself. The sign is the state: <strong>blue</strong> while the
+          board is the way it came (unflipped), <strong>red</strong> once you
+          have turned it, the same pair as the two colour circles around the
+          board, whose outlines also turn red.
         </li>
         <li>
           The flip is remembered: your next puzzle starts the same way round,
@@ -167,17 +170,25 @@
       <p>
         The strip of squares under the header is your session score:
         <span class="ok">green</span> = solved with no wrong attempts,
-        <span class="bad">red</span> = at least one wrong attempt.
+        <span class="bad">red</span> = at least one wrong attempt. Press
+        <strong>&#8634; Reset session</strong> beside the
+        <strong>Solved &middot; Failed</strong> counts to start the counter from
+        empty again. It is also cleared for you whenever you change the puzzle
+        source, the puzzle set, the difficulty, or the ply back &mdash; results
+        from a different configuration would otherwise be read as this one's
+        accuracy.
       </p>
 
       <h2>On a small screen</h2>
       <p>
         Below about 900&nbsp;px wide the board and the side panel stack, and
         the header shrinks its title and logo so everything still fits on one
-        row. <strong>New puzzle</strong> sits under the move table with
-        <strong>Flip</strong> (shortened from <em>Flip board</em>) beside it, and
+        row. <strong>New puzzle</strong> sits under the move table with the
+        <strong>&#8645;</strong> flip sign (it carries no label at any width)
+        beside it, and
         <strong>Reveal</strong> (shortened from <em>Reveal solution</em>) stays
-        in the hint line just above it.
+        in the hint line just above it. The counter's button shortens to
+        <strong>&#8634; Reset</strong>.
       </p>
       <p>
         On touch devices the solution box is not auto-focused, so the

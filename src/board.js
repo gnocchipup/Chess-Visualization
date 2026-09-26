@@ -1,4 +1,4 @@
-import { WHITE, BLACK } from './orientation.js';
+import { WHITE, BLACK, fileOrder, rankOrder } from './orientation.js';
 import wkUrl from './pieces/wk.svg';
 import wqUrl from './pieces/wq.svg';
 import wrUrl from './pieces/wr.svg';
@@ -50,6 +50,32 @@ function parsePlacement(fen) {
     if (cells.length !== 8) throw new Error(`Invalid FEN rank "${row}" in: ${fen}`);
     return cells;
   });
+}
+
+/**
+ * Paint the board's coordinate gutters: the file letters along the bottom edge
+ * and the rank numbers down the right edge, each in the order `orientation`
+ * calls for (see fileOrder / rankOrder in src/orientation.js).
+ *
+ * Both gutters are elements *outside* the .board grid, so the square-level
+ * drag/tap hit-testing in exercise.js (elementFromPoint -> .sq -> dataset.square)
+ * is unaffected by them, and so the two elements can be ordered independently
+ * of the DOM order of the squares.
+ */
+export function renderCoordinates(filesEl, ranksEl, orientation = WHITE) {
+  paintLabels(filesEl, fileOrder(orientation));
+  paintLabels(ranksEl, rankOrder(orientation));
+}
+
+/** Fill a gutter element with one <span> per label, left to right / top to bottom. */
+function paintLabels(el, labels) {
+  if (!el) return;
+  el.innerHTML = '';
+  for (const label of labels) {
+    const span = document.createElement('span');
+    span.textContent = label;
+    el.appendChild(span);
+  }
 }
 
 /**

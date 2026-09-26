@@ -386,8 +386,114 @@ main {
 
 #board-wrap {
   flex: 0 0 auto;
-  /* Anchor for the flipped-state badge that floats in the board's corner. */
+  /* The board's size lives here so the coordinate gutters and the colour
+     circles can be laid out *around* the board without shrinking it — the
+     gutters take their space from the page, not from the squares. */
+  --board-size: min(560px, 90vw);
+  /* Matches the border on .board; the gutters are inset by it so each letter
+     and number lines up with the square it labels. */
+  --board-border: 4px;
+}
+
+/* Board frame: the 8x8 grid, the file letters along its bottom edge, the rank
+   numbers down its right edge, and a small circle above and below naming the
+   colour at each end. Only the grid is #board itself; every other piece is a
+   sibling in this grid, which keeps the square-level drag/tap hit-testing in
+   exercise.js working on .sq elements alone. */
+.board-frame {
+  display: grid;
+  grid-template-columns: var(--board-size) auto;
+  grid-template-rows: auto auto auto auto;
+  /* No gap: the gutter rows must line up exactly with the board's columns. */
+  gap: 0;
+}
+
+.board-area {
+  grid-column: 1;
+  grid-row: 2;
+  /* Anchor for the flipped-state badge, which still floats in the board's
+     top-left corner now that the gutters have moved around it. */
   position: relative;
+}
+
+.board-ranks {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  /* Inset by the board's own border so each number centres on its rank, and
+     padded off the board's edge. */
+  padding: var(--board-border) 0 var(--board-border) 0.3rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.board-ranks span {
+  display: flex;
+  align-items: center;
+}
+
+.board-files {
+  grid-column: 1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  padding: 0 var(--board-border);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The colour circles: one row above the board, one below the coordinate
+   letters, both centred over the board (column 1 only, so the rank gutter does
+   not pull them off-centre). Reserving the height keeps the layout from
+   jumping when the first puzzle paints them. */
+.board-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0.9rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.board-side-top {
+  grid-column: 1;
+  grid-row: 1;
+  padding-bottom: 0.3rem;
+}
+
+.board-side-bottom {
+  grid-column: 1;
+  grid-row: 4;
+  padding-top: 0.3rem;
+}
+
+.side-dot {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  /* Unpainted = no puzzle on the board yet, so there is no side to show. The
+     attribute selector below is what reveals a painted circle. */
+  visibility: hidden;
+}
+
+.side-dot[data-color="white"] {
+  visibility: visible;
+  background: #f0e9dc;
+  border-color: #b9b0a2;
+}
+
+.side-dot[data-color="black"] {
+  visibility: visible;
+  background: #22201d;
+  border-color: #7d7568;
 }
 
 .board {
@@ -397,9 +503,10 @@ main {
      content-sized, so a sparse rank (no pieces) collapses and its cells
      render as rectangles instead of squares. */
   grid-template-rows: repeat(8, 1fr);
-  width: min(560px, 90vw);
+  /* Sized by the frame's first column (see --board-size above). */
+  width: 100%;
   aspect-ratio: 1;
-  border: 4px solid var(--border);
+  border: var(--board-border) solid var(--border);
   border-radius: 4px;
   overflow: hidden;
   user-select: none;
@@ -829,8 +936,15 @@ fieldset input[type="text"] {
     padding: 0.6rem 0.9rem 1.1rem;
   }
 
-  .board {
-    width: min(560px, 92vw);
+  /* The board keeps its size on a narrow screen; the gutters and colour
+     circles ride along inside the frame (see --board-size above). */
+  #board-wrap {
+    --board-size: min(560px, 92vw);
+  }
+
+  .board-ranks,
+  .board-files {
+    font-size: 0.6rem;
   }
 
   #side {

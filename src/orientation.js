@@ -18,6 +18,34 @@ export function flipOrientation(orientation) {
 }
 
 /**
+ * Colour shown at the **top** of the board when `orientation` is at the bottom.
+ * Always the other side, which is what makes the two colour indicators on the
+ * board frame (see src/board.js renderCoordinates / exercise.js paintSideDots)
+ * agree with the rank numbers they sit beside.
+ */
+export function topColor(orientation) {
+  return flipOrientation(orientation);
+}
+
+/**
+ * File letters along the **bottom** edge of the board, left to right.
+ * White at the bottom -> a..h; black at the bottom -> h..a.
+ */
+export function fileOrder(orientation) {
+  const files = 'abcdefgh'.split('');
+  return orientation === BLACK ? files.reverse() : files;
+}
+
+/**
+ * Rank numbers down the **right** edge of the board, top to bottom.
+ * White at the bottom -> 8..1; black at the bottom -> 1..8.
+ */
+export function rankOrder(orientation) {
+  const ranks = '12345678'.split('');
+  return orientation === BLACK ? ranks : ranks.reverse();
+}
+
+/**
  * Colour to show at the bottom for a puzzle.
  *
  * The default is auto-detection: the solver's own colour, so their pieces sit

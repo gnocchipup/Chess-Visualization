@@ -30,6 +30,10 @@ const els = {
   btnFlip: $('btn-flip'),
   btnReveal: $('btn-reveal'),
   flipBadge: $('board-flip-badge'),
+  boardFiles: $('board-files'),
+  boardRanks: $('board-ranks'),
+  dotTop: $('board-dot-top'),
+  dotBottom: $('board-dot-bottom'),
   score: $('score'),
   scoreStrip: $('score-strip'),
   builder: $('builder'),
@@ -109,6 +113,12 @@ const exercise = new Exercise({
   infoEl: $('puzzle-info'),
   errorEl: $('error-box'),
   revealBtn: els.btnReveal,
+  // Board frame chrome: coordinate gutters + the two colour circles, all
+  // painted from the board's orientation (see Exercise.paintBoard).
+  filesEl: els.boardFiles,
+  ranksEl: els.boardRanks,
+  topDotEl: els.dotTop,
+  bottomDotEl: els.dotBottom,
   // Board flip is a persisted preference: the exercise asks for the stored
   // value whenever it prepares a puzzle, and reports every flip back so it can
   // be saved (and mirrored onto the button and the board's corner badge).

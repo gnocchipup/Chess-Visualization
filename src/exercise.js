@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
-import { renderBoard, PIECE_URL, PIECE_NAME } from './board.js';
-import { WHITE, BLACK, resolveOrientation } from './orientation.js';
+import { renderBoard, renderCoordinates, PIECE_URL, PIECE_NAME } from './board.js';
+import { WHITE, BLACK, resolveOrientation, topColor } from './orientation.js';
 import { fetchPuzzle } from './lichess.js';
 import { isKeyboardFirst } from './layout.js';
 
@@ -18,12 +18,34 @@ function playUci(chess, uci) {
  *   context moves    = 0-based move indices initialPly - X + 1 .. initialPly
  */
 export class Exercise {
-  constructor({ boardEl, tableEl, infoEl, errorEl, revealBtn, onResult, getFlipped, onFlipChange }) {
+  constructor({
+    boardEl,
+    tableEl,
+    infoEl,
+    errorEl,
+    revealBtn,
+    filesEl,
+    ranksEl,
+    topDotEl,
+    bottomDotEl,
+    onResult,
+    getFlipped,
+    onFlipChange,
+  }) {
     this.boardEl = boardEl;
     this.tableEl = tableEl;
     this.infoEl = infoEl;
     this.errorEl = errorEl;
     this.revealBtn = revealBtn;
+    // Board frame chrome that follows the orientation: the file letters along
+    // the bottom edge, the rank numbers down the right edge, and the two small
+    // circles naming the colour at the top and the bottom of the board. All
+    // four live outside the .board grid (see index.html), so they never
+    // interfere with the square-level drag/tap input below.
+    this.filesEl = filesEl ?? null;
+    this.ranksEl = ranksEl ?? null;
+    this.topDotEl = topDotEl ?? null;
+    this.bottomDotEl = bottomDotEl ?? null;
     this.onResult = onResult;
     // Board flip is a persisted preference that main.js owns (localStorage):
     // the exercise reads the stored value whenever a puzzle is prepared and
@@ -247,25 +269,64 @@ export class Exercise {
     this.onFlipChange?.(this.flipped);
     if (!this.boardFen) return;
     this.orientation = resolveOrientation(this.solverColor, this.flipped);
-    renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
-    this.updateBoardLabels();
+    this.paintBoard();
     // A parked chip marks the tap-selected square; re-centre it on the
     // re-rendered square so the selection survives the flip visually.
     if (this.selected) this.parkChip(this.selected);
   }
 
   /**
+   * Paint everything on the board frame that follows the orientation: the 8x8
+   * grid, the file letters and rank numbers in its gutters, the two colour
+   * circles, and the board's own accessible name. Called whenever a puzzle is
+   * prepared and on every flip, so a turned board can never leave the chrome
+   * (or the circles) pointing the wrong way.
+   */
+  paintBoard() {
+    renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
+    renderCoordinates(this.filesEl, this.ranksEl, this.orientation);
+    this.paintSideDots();
+    this.updateBoardLabels();
+  }
+
+  /**
    * Board tooltip and accessible name. Both state which colour is at the bottom
    * and whether that is the flipped orientation, so the state is available even
-   * where the corner badge is not read out.
+   * where the corner badge or the colour circles are not read out.
    */
   updateBoardLabels() {
     const bottom = this.orientation === BLACK ? 'black' : 'white';
+    const top = topColor(this.orientation) === BLACK ? 'black' : 'white';
     const flipped = this.flipped ? ' (flipped)' : '';
     this.boardEl.title =
       `Drag or tap square-to-square to enter a move · press F or Flip to turn the board · ` +
       `showing ${bottom} at the bottom${flipped}`;
-    this.boardEl.setAttribute('aria-label', `Chess board, ${bottom} at the bottom${flipped}`);
+    this.boardEl.setAttribute(
+      'aria-label',
+      `Chess board, ${bottom} at the bottom and ${top} at the top${flipped}`
+    );
+  }
+
+  /**
+   * The two small circles: one above the board, one below it. The bottom circle
+   * is the board's orientation, the top circle the opposite side — the same
+   * relationship as the rank numbers running down the board's right edge, so
+   * the circles always agree with the coordinates. The colour is published as
+   * data-color, which is also what reveals a circle (CSS keeps an unpainted dot
+   * invisible), and the title spells the side out in words. Both circles stay
+   * aria-hidden: the board's own aria-label already names both ends (see
+   * updateBoardLabels), so announcing them again would only double up.
+   */
+  paintSideDots() {
+    this.paintSideDot(this.topDotEl, topColor(this.orientation), 'top');
+    this.paintSideDot(this.bottomDotEl, this.orientation, 'bottom');
+  }
+
+  paintSideDot(el, color, end) {
+    if (!el) return;
+    const name = color === BLACK ? 'Black' : 'White';
+    el.dataset.color = color;
+    el.title = `${name} is at the ${end} of the board`;
   }
 
   get active() {
@@ -358,8 +419,7 @@ export class Exercise {
     this.solverColor = this.chess.turn() === 'b' ? BLACK : WHITE;
     this.flipped = !!this.getFlipped();
     this.orientation = resolveOrientation(this.solverColor, this.flipped);
-    this.updateBoardLabels();
-    renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
+    this.paintBoard();
 
     this.renderInfo(puzzle);
     this.renderTable();

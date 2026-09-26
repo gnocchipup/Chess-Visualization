@@ -75,13 +75,32 @@
 
       <main>
         <section id="board-wrap">
-          <!-- Small indicator of the flipped state (see main.js renderFlipState).
-               Purely visual: pointer-events:none in CSS keeps it from stealing
-               drag/tap input aimed at the square underneath. -->
-          <span id="board-flip-badge" class="flip-badge" hidden>
-            <span class="flip-icon" aria-hidden="true">&#8645;</span>Flipped
-          </span>
-          <div id="board" class="board" aria-label="Chess board"></div>
+          <!-- Board frame: the 8x8 grid plus its chrome. The file letters and the
+               rank numbers sit in gutters *outside* #board so the square-level
+               drag/tap hit-testing in exercise.js is untouched, and the two small
+               circles above and below the board name the colour at each end
+               (painted by exercise.js paintSideDots). The gutters and the circles
+               are aria-hidden: the board's own aria-label already states the
+               orientation, so announcing them too would only double up. -->
+          <div id="board-frame" class="board-frame">
+            <div class="board-side board-side-top">
+              <span id="board-dot-top" class="side-dot" aria-hidden="true"></span>
+            </div>
+            <div id="board-area" class="board-area">
+              <!-- Small indicator of the flipped state (see main.js renderFlipState).
+                   Purely visual: pointer-events:none in CSS keeps it from stealing
+                   drag/tap input aimed at the square underneath. -->
+              <span id="board-flip-badge" class="flip-badge" hidden>
+                <span class="flip-icon" aria-hidden="true">&#8645;</span>Flipped
+              </span>
+              <div id="board" class="board" aria-label="Chess board"></div>
+            </div>
+            <div id="board-ranks" class="board-ranks" aria-hidden="true"></div>
+            <div id="board-files" class="board-files" aria-hidden="true"></div>
+            <div class="board-side board-side-bottom">
+              <span id="board-dot-bottom" class="side-dot" aria-hidden="true"></span>
+            </div>
+          </div>
         </section>
         <section id="side">
           <div id="puzzle-info" class="puzzle-info">

@@ -16,6 +16,9 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
 - **Board orientation** — flipped automatically when the puzzle is for the black side, and flippable by
   hand (**F**, or the **Flip board** button beside *New puzzle*, which is how touch screens reach it).
   A manual flip is remembered, so the next puzzle starts the same way round.
+- **Board coordinates** — file letters along the bottom edge and rank numbers down the right edge, with
+  a small circle above and below the board naming the colour at each end (light = white, dark = black).
+  Coordinates and circles both follow a flip, so the labels always name the squares they sit beside.
 - **Session scoring** — a Lichess-style strip of green/red squares.
 - **Spoiler-safe hints** — the puzzle's rating and themes stay hidden behind a **Hint** button; the
   **Reveal solution** button only appears once you've asked for a hint.
@@ -56,9 +59,10 @@ committed.
 | `npm run dev` | Vite dev server with hot module replacement |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
-| `npm test` | Runs `test:topbar`, `test:flip`, `test:next`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
+| `npm test` | Runs `test:topbar`, `test:flip`, `test:coords`, `test:next`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
 | `npm run test:topbar` | Legacy drawer geometry (pure logic, runs offline) |
 | `npm run test:flip` | Board-orientation rules + the persisted flip preference (pure logic, runs offline) |
+| `npm run test:coords` | Board coordinates + colour circles (pure logic, runs offline) |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
 | `npm run test:loop` | Solving-loop logic tests |
 | `npm run test:orient` | Board-orientation rule against live puzzles |
@@ -135,6 +139,13 @@ Press **F** — or **Flip board**, the button beside **New puzzle** that gives t
 control — to flip the board 180° at any time. The shortcut is ignored while you're typing in a move
 cell, so it can never swallow a keystroke meant for a solution attempt.
 
+The board is framed by its coordinates: **file letters along the bottom edge** and **rank numbers down
+the right edge**, both outside the playing area so they never cover a piece. A small coloured circle
+sits above the board and another below it, naming the colour at each end — light for white, dark for
+black — so you can see at a glance which side is which way round. Everything in the frame follows the
+orientation: flipping turns the letters round (`a`–`h` becomes `h`–`a`), reverses the numbers, and
+swaps the two circles, so each label always names the square it sits beside.
+
 Flipping only re-orients the static board: it does not change the position or the solving state. The
 flip is a **persisted preference** (`cpt.flipped`), so the next puzzle starts the same way round —
 flipped relative to *that* puzzle's auto-detected orientation, whichever colour it is for. While it
@@ -169,8 +180,8 @@ index.html                     entry point + static markup
     ├── src/settings.js        localStorage settings + session score
     ├── src/exercise.js        one puzzle: fetch, ply alignment, render, solving loop
     │   ├── src/lichess.js     GET /api/puzzle/{puzzleId}
-    │   ├── src/board.js       FEN -> static 8x8 SVG board
-    │   └── src/orientation.js board orientation rules (pure logic, unit-tested)
+    │   ├── src/board.js       FEN -> static 8x8 SVG board + the frame's coordinate gutters
+    │   └── src/orientation.js board orientation, coordinate order and side colours (pure logic, unit-tested)
     ├── src/pieces/            Cburnett SVG piece set (see Licenses)
     ├── src/layout.js          legacy narrow-screen drawer (inert; pure geometry, unit-tested)
     └── src/style.css
@@ -190,7 +201,20 @@ CREATE TABLE puzzles (
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 -- meta keys: name, created_at, rating_min, rating_max, puzzle_count, source_rows
 ```
-│   │   ├── verify-topbar.mjs   — top-bar drawer geometry (pure logic, offline)
+### Test scripts
+
+```
+scripts/
+├── verify-topbar.mjs       — legacy drawer geometry (pure logic, offline)
+├── verify-flip.mjs         — orientation rules + the persisted flip (pure logic, offline)
+├── verify-coords.mjs       — board coordinates + colour circles (pure logic, offline)
+├── verify-yh7ub.mjs        — ply-alignment acceptance test (puzzle Yh7uB, live API)
+├── verify-orientation.mjs  — orientation rule against live puzzles
+├── verify-next.mjs         — GET /api/puzzle/next payload shape (live API)
+├── verify-solving.mjs      — solving-loop logic (live API)
+├── verify-drag.mjs         — square-to-square drag-input logic (live API)
+└── smoke-preview.mjs       — smoke test a *running* preview server
+```
 
 ### Ply alignment
 
@@ -230,7 +254,7 @@ npm test        # drawer geometry + ply alignment + solving loop + orientation +
 npm run smoke   # needs `npm run preview` running in another terminal
 ```
 
-- **`test:topbar` and `test:flip` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
+- **`test:topbar`, `test:flip` and `test:coords` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
   (`https://lichess.org/api/puzzle/...`) — nothing is mocked, mirroring the app's own
   no-network-no-app rule. `npm run test:ply` also asserts the exact board FEN and context rows for
   puzzle `Yh7uB`, making it the regression guard for the ply alignment described above.
@@ -239,6 +263,10 @@ npm run smoke   # needs `npm run preview` running in another terminal
   black puzzle are covered. `npm run test:flip` covers the flip half of that rule without a network:
   the auto orientation, the inversion, that flipping twice is a no-op, and that the preference
   round-trips through `cpt.flipped` (against a small localStorage stub, since Node has no storage).
+  `npm run test:coords` covers the board frame without a network: it mirrors `renderBoard`'s own square
+  naming and asserts that the `j`-th letter along the bottom edge names the file of the `j`-th board
+  column and the `i`-th number down the right edge names the rank of the `i`-th row, in both
+  orientations — which is exactly what a mis-ordered gutter, or a circle on the wrong end, would break.
 - **`npm run smoke` does not start a server.** It asserts against an already-running
   `npm run preview` on port 4173: that `/` serves, that the JS bundle loads, that the sql.js WASM
   binary is reachable, and that `ORDER BY RANDOM` survived minification.
@@ -339,8 +367,9 @@ pieces keep their own terms.
 
 - **No offline mode.** If the Lichess API is unreachable the app shows a retryable error and will not
   fall back to anything — by design, since the API is the source of truth for puzzle alignment.
-- **The board is static.** It renders from a FEN and never animates — a manual flip only re-orients it,
-  pieces are never dragged and moves are never shown on it. Square-to-square drag/tap gestures are
+- **The board is static.** It renders from a FEN and never animates — a manual flip only re-orients it
+  (the coordinate gutters and the colour circles turn with it), pieces are never dragged and moves are
+  never shown on it. Square-to-square drag/tap gestures are
   accepted purely as an alternative way to *enter* a solution move; the only visual feedback is a
   translucent grey chip held under the pointer (or parked on the tap-selected square).
 - **`.zst` files are rejected.** Decompress `lichess_db_puzzle.csv.zst` before building a set.
@@ -349,7 +378,8 @@ pieces keep their own terms.
 - **IndexedDB quota.** Safari caps an origin at roughly 1 GB, which is fine for the intended set
   sizes but limits how many large sets you can keep at once.
 - **Most verify scripts need network access,** so `npm test` cannot run offline or in a sandbox
-  without egress. The exception is `test:topbar` (pure drawer geometry, no network).
+  without egress. The exceptions are `test:topbar`, `test:flip` and `test:coords` (pure geometry and
+  orientation rules, no network).
 
 ## Credits
 

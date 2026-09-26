@@ -49,6 +49,21 @@ export function setDifficulty(value) {
   localStorage.setItem(KEY_DIFFICULTY, typeof value === 'string' ? value : '');
 }
 
+const KEY_FLIPPED = NS + 'flipped';
+
+/**
+ * Board flip preference: true = show the board from the other side than the
+ * auto-detected one. Persisted, so a flip survives the next puzzle and a
+ * reload; the orientation rule itself lives in src/orientation.js.
+ */
+export function getFlipped() {
+  return localStorage.getItem(KEY_FLIPPED) === '1';
+}
+
+export function setFlipped(value) {
+  localStorage.setItem(KEY_FLIPPED, value ? '1' : '0');
+}
+
 /** Session-scoped score, persisted in localStorage: array of booleans (true = clean solve). */
 export function getResults() {
   try {

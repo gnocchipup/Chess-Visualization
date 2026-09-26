@@ -27,7 +27,9 @@ const els = {
   plyBack: $('ply-back'),
   btnBuilder: $('btn-builder'),
   btnNew: $('btn-new'),
+  btnFlip: $('btn-flip'),
   btnReveal: $('btn-reveal'),
+  flipBadge: $('board-flip-badge'),
   score: $('score'),
   scoreStrip: $('score-strip'),
   builder: $('builder'),
@@ -107,6 +109,14 @@ const exercise = new Exercise({
   infoEl: $('puzzle-info'),
   errorEl: $('error-box'),
   revealBtn: els.btnReveal,
+  // Board flip is a persisted preference: the exercise asks for the stored
+  // value whenever it prepares a puzzle, and reports every flip back so it can
+  // be saved (and mirrored onto the button and the board's corner badge).
+  getFlipped: settings.getFlipped,
+  onFlipChange: (flipped) => {
+    settings.setFlipped(flipped);
+    renderFlipState(flipped);
+  },
   onResult: (solved) => {
     settings.pushResult(solved);
     renderScore();
@@ -171,6 +181,22 @@ function renderScore() {
     sq.title = ok ? 'Solved' : 'Failed';
     els.scoreStrip.appendChild(sq);
   }
+}
+
+/* ---------- board flip ---------- */
+
+/**
+ * Mirror the flip preference onto the flip button and the small badge in the
+ * board's corner. The button carries the state semantically (aria-pressed), and
+ * the badge is the at-a-glance indicator — so the flipped state is still obvious
+ * once the button has scrolled out of view under a long move table.
+ */
+function renderFlipState(flipped) {
+  els.btnFlip.setAttribute('aria-pressed', String(flipped));
+  els.btnFlip.title = flipped
+    ? 'Unflip the board (F) — remembered for the next puzzle'
+    : 'Flip the board 180° (F) — remembered for the next puzzle';
+  els.flipBadge.hidden = !flipped;
 }
 
 /* ---------- puzzle sets ---------- */
@@ -451,6 +477,11 @@ async function onNewPuzzle() {
 }
 
 els.btnNew.addEventListener('click', onNewPuzzle);
+
+// Flip control beside New puzzle: the F shortcut is unreachable on touch, and
+// the state it sets is persisted (see the Exercise options above).
+els.btnFlip.addEventListener('click', () => exercise.flip());
+renderFlipState(settings.getFlipped());
 
 els.btnReveal.addEventListener('click', () => exercise.reveal());
 els.btnBuilder.addEventListener('click', () => {

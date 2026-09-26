@@ -1,3 +1,4 @@
+import { WHITE, BLACK } from './orientation.js';
 import wkUrl from './pieces/wk.svg';
 import wqUrl from './pieces/wq.svg';
 import wrUrl from './pieces/wr.svg';
@@ -11,10 +12,9 @@ import bbUrl from './pieces/bb.svg';
 import bnUrl from './pieces/bn.svg';
 import bpUrl from './pieces/bp.svg';
 
-export const WHITE = 'white';
-export const BLACK = 'black';
-
-/** FEN piece letter -> bundled SVG asset. Uppercase = white, lowercase = black. */
+/**
+ * FEN piece letter -> bundled SVG asset. Uppercase = white, lowercase = black.
+ */
 export const PIECE_URL = {
   K: wkUrl, Q: wqUrl, R: wrUrl, B: wbUrl, N: wnUrl, P: wpUrl,
   k: bkUrl, q: bqUrl, r: brUrl, b: bbUrl, n: bnUrl, p: bpUrl,

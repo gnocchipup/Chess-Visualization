@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
-import { renderBoard, WHITE, BLACK, PIECE_URL, PIECE_NAME } from './board.js';
+import { renderBoard, PIECE_URL, PIECE_NAME } from './board.js';
+import { WHITE, BLACK, resolveOrientation } from './orientation.js';
 import { fetchPuzzle } from './lichess.js';
 import { isKeyboardFirst } from './layout.js';
 
@@ -17,17 +18,24 @@ function playUci(chess, uci) {
  *   context moves    = 0-based move indices initialPly - X + 1 .. initialPly
  */
 export class Exercise {
-  constructor({ boardEl, tableEl, infoEl, errorEl, revealBtn, onResult }) {
+  constructor({ boardEl, tableEl, infoEl, errorEl, revealBtn, onResult, getFlipped, onFlipChange }) {
     this.boardEl = boardEl;
     this.tableEl = tableEl;
     this.infoEl = infoEl;
     this.errorEl = errorEl;
     this.revealBtn = revealBtn;
     this.onResult = onResult;
+    // Board flip is a persisted preference that main.js owns (localStorage):
+    // the exercise reads the stored value whenever a puzzle is prepared and
+    // reports every flip back, so a flip survives the next puzzle and a reload.
+    // Orientation rules live in src/orientation.js.
+    this.getFlipped = getFlipped ?? (() => false);
+    this.onFlipChange = onFlipChange ?? null;
     this.clear();
 
-    // Optional shortcut: 'F' flips the board. Ignored while typing in the move
-    // table so it never swallows a keystroke meant for a solution attempt.
+    // Optional shortcut: 'F' flips the board (it is also a button beside New
+    // puzzle, which is how touch users reach it). Ignored while typing in the
+    // move table so it never swallows a keystroke meant for a solution attempt.
     this.onKeyDown = (e) => {
       if (e.key === 'Escape') {
         // Cancel a pending promotion choice without failing the attempt.
@@ -211,6 +219,10 @@ export class Exercise {
     this.tbodyEl = null;
     this.boardFen = null;
     this.orientation = WHITE;
+    // Whether the board currently shows the other side than the auto-detected
+    // one. Re-read from the persisted preference when the next puzzle is
+    // prepared (see setup), so it always matches what is on screen.
+    this.flipped = false;
     this.solverColor = null;
     this.dragFrom = null;
     this.dragMoved = false;
@@ -223,14 +235,37 @@ export class Exercise {
    * Flip the board 180 degrees. This only re-orients the static board; it does
    * not change the position or touch the solving state, so it is safe to call
    * at any point during a puzzle.
+   *
+   * The new state is reported to main.js, which persists it (cpt.flipped), so
+   * the flip survives the next puzzle — where the solver may well be the other
+   * colour, and the board is then flipped relative to *that* puzzle's
+   * auto-detected orientation. Flipping before the first puzzle loads works
+   * too: there is nothing to re-render, but the preference still applies.
    */
   flip() {
+    this.flipped = !this.flipped;
+    this.onFlipChange?.(this.flipped);
     if (!this.boardFen) return;
-    this.orientation = this.orientation === WHITE ? BLACK : WHITE;
+    this.orientation = resolveOrientation(this.solverColor, this.flipped);
     renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
+    this.updateBoardLabels();
     // A parked chip marks the tap-selected square; re-centre it on the
     // re-rendered square so the selection survives the flip visually.
     if (this.selected) this.parkChip(this.selected);
+  }
+
+  /**
+   * Board tooltip and accessible name. Both state which colour is at the bottom
+   * and whether that is the flipped orientation, so the state is available even
+   * where the corner badge is not read out.
+   */
+  updateBoardLabels() {
+    const bottom = this.orientation === BLACK ? 'black' : 'white';
+    const flipped = this.flipped ? ' (flipped)' : '';
+    this.boardEl.title =
+      `Drag or tap square-to-square to enter a move · press F or Flip to turn the board · ` +
+      `showing ${bottom} at the bottom${flipped}`;
+    this.boardEl.setAttribute('aria-label', `Chess board, ${bottom} at the bottom${flipped}`);
   }
 
   get active() {
@@ -316,12 +351,14 @@ export class Exercise {
     this.chess = new Chess(solvingFen);
 
     // The solver plays the side to move in the solving position. If that is
-    // black, show the board from black's side.
+    // black, show the board from black's side — unless the persisted flip
+    // preference is on, which shows the other side than the auto-detected one
+    // (that is what carries a manual flip over to the next puzzle).
     this.boardFen = boardFen;
     this.solverColor = this.chess.turn() === 'b' ? BLACK : WHITE;
-    this.orientation = this.solverColor;
-    this.boardEl.title =
-      'Drag or tap square-to-square to enter a move · press F to flip the board';
+    this.flipped = !!this.getFlipped();
+    this.orientation = resolveOrientation(this.solverColor, this.flipped);
+    this.updateBoardLabels();
     renderBoard(this.boardEl, this.boardFen, { orientation: this.orientation });
 
     this.renderInfo(puzzle);

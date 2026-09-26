@@ -75,6 +75,12 @@
 
       <main>
         <section id="board-wrap">
+          <!-- Small indicator of the flipped state (see main.js renderFlipState).
+               Purely visual: pointer-events:none in CSS keeps it from stealing
+               drag/tap input aimed at the square underneath. -->
+          <span id="board-flip-badge" class="flip-badge" hidden>
+            <span class="flip-icon" aria-hidden="true">&#8645;</span>Flipped
+          </span>
           <div id="board" class="board" aria-label="Chess board"></div>
         </section>
         <section id="side">
@@ -90,6 +96,20 @@
           </div>
           <div class="controls">
             <button id="btn-new" class="btn-primary" type="button">New puzzle</button>
+            <!-- Board flip sits beside the primary action because the F shortcut
+                 is out of reach on a phone: the state is persisted (cpt.flipped)
+                 so the next puzzle starts the same way round, and it is mirrored
+                 by the small badge in the board's corner. -->
+            <button
+              id="btn-flip"
+              type="button"
+              aria-pressed="false"
+              title="Flip the board 180&deg; (F) &mdash; remembered for the next puzzle"
+            >
+              <span class="flip-icon" aria-hidden="true">&#8645;</span>
+              <span class="label-wide">Flip board</span>
+              <span class="label-narrow">Flip</span>
+            </button>
             <!-- Moved into the hint line by exercise.js renderInfo() and only
                  revealed once the solver asks for a hint. -->
             <button id="btn-reveal" type="button" hidden disabled>

@@ -13,7 +13,9 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
 - **Import / export** — sets are stored in IndexedDB and can be exported or imported as `.sqlite` files.
 - **Solving screen** — a static board, a PGN-style move table, and SAN entry for the solution, plus
   square-to-square drag/tap input that works with mouse and touch.
-- **Automatic board orientation** — the board is flipped when the puzzle is for the black side.
+- **Board orientation** — flipped automatically when the puzzle is for the black side, and flippable by
+  hand (**F**, or the **Flip board** button beside *New puzzle*, which is how touch screens reach it).
+  A manual flip is remembered, so the next puzzle starts the same way round.
 - **Session scoring** — a Lichess-style strip of green/red squares.
 - **Spoiler-safe hints** — the puzzle's rating and themes stay hidden behind a **Hint** button; the
   **Reveal solution** button only appears once you've asked for a hint.
@@ -54,8 +56,9 @@ committed.
 | `npm run dev` | Vite dev server with hot module replacement |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
-| `npm test` | Runs `test:topbar`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
+| `npm test` | Runs `test:topbar`, `test:flip`, `test:next`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
 | `npm run test:topbar` | Legacy drawer geometry (pure logic, runs offline) |
+| `npm run test:flip` | Board-orientation rules + the persisted flip preference (pure logic, runs offline) |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
 | `npm run test:loop` | Solving-loop logic tests |
 | `npm run test:orient` | Board-orientation rule against live puzzles |
@@ -128,17 +131,23 @@ board is flipped automatically** so black is at the bottom.
 > **opponent's**, not the solver's. Orienting by the CSV FEN is therefore wrong by exactly one ply
 > on every puzzle. `scripts/verify-orientation.mjs` pins this.
 
-Press **F** to flip the board 180° at any time. The shortcut is ignored while you're typing in a
-move cell, so it can never swallow a keystroke meant for a solution attempt. Flipping only
-re-orients the static board — it does not change the position or the solving state, and the
-orientation resets to the auto-detected value for each new puzzle.
+Press **F** — or **Flip board**, the button beside **New puzzle** that gives touch screens the same
+control — to flip the board 180° at any time. The shortcut is ignored while you're typing in a move
+cell, so it can never swallow a keystroke meant for a solution attempt.
+
+Flipping only re-orients the static board: it does not change the position or the solving state. The
+flip is a **persisted preference** (`cpt.flipped`), so the next puzzle starts the same way round —
+flipped relative to *that* puzzle's auto-detected orientation, whichever colour it is for. While it
+is on, the button reads as pressed and a small **⇅ Flipped** badge sits in the board's top-left
+corner, so a turned board is never a surprise; flipping back to the default clears both.
 
 #### Small screens
 
 Below 900 px wide the board and the side panel stack, and the header compacts its labels (smaller
 title and logo) so the settings and puzzle link still fit on one row. The move table is capped at
 45 vh so a long solution can't push the controls off-screen — **New puzzle** sits directly beneath
-it, and the hint line (with **Reveal** shortened from *Reveal solution*) stays just above.
+it with **Flip** (shortened from *Flip board*) beside it, and the hint line (with **Reveal**
+shortened from *Reveal solution*) stays just above.
 
 The solution cell is only auto-focused when a keyboard and fine pointer are detected; on touch
 devices it waits for you to tap, so the on-screen keyboard never pops up uninvited over the board.
@@ -160,7 +169,8 @@ index.html                     entry point + static markup
     ├── src/settings.js        localStorage settings + session score
     ├── src/exercise.js        one puzzle: fetch, ply alignment, render, solving loop
     │   ├── src/lichess.js     GET /api/puzzle/{puzzleId}
-    │   └── src/board.js       FEN -> static 8x8 SVG board
+    │   ├── src/board.js       FEN -> static 8x8 SVG board
+    │   └── src/orientation.js board orientation rules (pure logic, unit-tested)
     ├── src/pieces/            Cburnett SVG piece set (see Licenses)
     ├── src/layout.js          legacy narrow-screen drawer (inert; pure geometry, unit-tested)
     └── src/style.css
@@ -198,8 +208,10 @@ board FEN        = P(initialPly - X + 1),  X = min(plyBack, initialPly)
 context moves    = 0-based move indices initialPly - X + 1 .. initialPly
 ```
 
-The CSV `Moves` column is used only as a fallback source of the solution, and the board's
-orientation follows the side to move in the **solving** position.
+The CSV `Moves` column is used only as a fallback source of the solution, and the board's default
+orientation follows the side to move in the **solving** position. That default can be inverted: the
+manual flip is a persisted preference, and `src/orientation.js` (`resolveOrientation`) is the single
+place both the auto rule and the override are decided.
 
 ### Storage keys
 
@@ -209,6 +221,7 @@ orientation follows the side to move in the **solving** position.
 | localStorage | `cpt.plyBack` | Ply-back setting |
 | localStorage | `cpt.activeSet` | Selected set id, restored on reload |
 | localStorage | `cpt.results` | Array of booleans, one per solved/failed puzzle |
+| localStorage | `cpt.flipped` | `'1'` while the board is flipped from its auto orientation, `'0'` otherwise |
 
 ## Testing
 
@@ -217,13 +230,15 @@ npm test        # drawer geometry + ply alignment + solving loop + orientation +
 npm run smoke   # needs `npm run preview` running in another terminal
 ```
 
-- **Only `test:topbar` runs offline; the rest of `npm test` requires network access.** The other four verify scripts hit the live Lichess API
+- **`test:topbar` and `test:flip` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
   (`https://lichess.org/api/puzzle/...`) — nothing is mocked, mirroring the app's own
   no-network-no-app rule. `npm run test:ply` also asserts the exact board FEN and context rows for
   puzzle `Yh7uB`, making it the regression guard for the ply alignment described above.
   `npm run test:orient` pins the board-orientation rule: it asserts the solver owns the piece that
   plays `solution[0]`, that the CSV FEN side is always the *opponent*, and that both a white and a
-  black puzzle are covered.
+  black puzzle are covered. `npm run test:flip` covers the flip half of that rule without a network:
+  the auto orientation, the inversion, that flipping twice is a no-op, and that the preference
+  round-trips through `cpt.flipped` (against a small localStorage stub, since Node has no storage).
 - **`npm run smoke` does not start a server.** It asserts against an already-running
   `npm run preview` on port 4173: that `/` serves, that the JS bundle loads, that the sql.js WASM
   binary is reachable, and that `ORDER BY RANDOM` survived minification.
@@ -324,10 +339,10 @@ pieces keep their own terms.
 
 - **No offline mode.** If the Lichess API is unreachable the app shows a retryable error and will not
   fall back to anything — by design, since the API is the source of truth for puzzle alignment.
-- **The board is static.** It renders once per puzzle and never animates — pieces are never dragged
-  and moves are never shown on it. Square-to-square drag/tap gestures are accepted purely as an
-  alternative way to *enter* a solution move; the only visual feedback is a translucent grey chip
-  held under the pointer (or parked on the tap-selected square).
+- **The board is static.** It renders from a FEN and never animates — a manual flip only re-orients it,
+  pieces are never dragged and moves are never shown on it. Square-to-square drag/tap gestures are
+  accepted purely as an alternative way to *enter* a solution move; the only visual feedback is a
+  translucent grey chip held under the pointer (or parked on the tap-selected square).
 - **`.zst` files are rejected.** Decompress `lichess_db_puzzle.csv.zst` before building a set.
 - **sql.js keeps the whole database in memory.** Comfortable into the low tens of thousands of
   puzzles; the builder warns beyond 50,000.

@@ -215,6 +215,24 @@ header h1,
   color: var(--text);
 }
 
+/* Board flip: a secondary action beside "New puzzle" (the F shortcut it mirrors
+   does not exist on a touch keyboard). Its pressed state is the semantic half of
+   the flipped indicator; the board-corner badge is the visual half. */
+#btn-flip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+#btn-flip[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(127, 166, 80, 0.16);
+}
+
 label {
   display: inline-flex;
   align-items: center;
@@ -368,6 +386,8 @@ main {
 
 #board-wrap {
   flex: 0 0 auto;
+  /* Anchor for the flipped-state badge that floats in the board's corner. */
+  position: relative;
 }
 
 .board {
@@ -412,6 +432,40 @@ main {
 
 .board .sq.dark {
   background: var(--dark-sq);
+}
+
+/* Flipped-state indicator: a small chip parked in the board's top-left corner
+   while the board is turned away from its auto-detected orientation. It is
+   purely visual, so pointer-events:none keeps it from swallowing the drag/tap
+   gesture aimed at the square underneath it. */
+.flip-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.12rem 0.42rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.72);
+  color: var(--text);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The inline-flex above would override the `hidden` attribute, so restore it. */
+.flip-badge[hidden] {
+  display: none;
+}
+
+.flip-icon {
+  font-size: 1.05em;
+  line-height: 1;
 }
 
 /* Drag/tap input feedback: a translucent grey chip "held" under the pointer

@@ -3,7 +3,10 @@
 //
 // The solver plays the side to move in the solving position P_{initialPly + 1}
 // (see scripts/verify-yh7ub.mjs for the ply arithmetic). That colour decides the
-// board orientation, so a puzzle where black is to move must be shown flipped.
+// default board orientation, so a puzzle where black is to move is shown flipped
+// unless the persisted flip preference (cpt.flipped) inverts it again — that
+// override, and the storage key itself, is covered offline by
+// scripts/verify-flip.mjs.
 //
 // Rather than hard-coding a colour per puzzle, this asserts the invariant that
 // makes the rule correct, then checks both branches are actually exercised.
@@ -33,7 +36,7 @@ for (const id of PUZZLE_IDS) {
   const solvingFen = fenAfter(puzzle.initialPly + 1);
   const chess = new Chess(solvingFen);
   const solver = chess.turn() === 'b' ? 'black' : 'white';
-  const orientation = solver; // exercise.js flips the board when this is 'black'
+  const orientation = solver; // exercise.js's default: solver colour at the bottom
   seen.add(solver);
 
   // The CSV FEN column is P_{initialPly}: the position *before* the opponent's

@@ -80,18 +80,29 @@ header h1,
   display: contents;
 }
 
-/* Desktop order: the title, then the settings button, then account + help —
-   the same left-to-right run as before the header became collapsible. The
-   wrappers are display:contents here, so their children are the header's flex
-   items and can be ordered directly. Mobile stacks the header instead and does
-   not use these. */
+/* Desktop order: title on the left, then the account, the settings gear right
+   beside it, then help — the gear sits next to the name it configures rather
+   than out at the end of the row.
+
+   .header-actions also becomes display:contents, so the account and the help
+   link are separate flex items of the header and the gear can slot between them
+   with `order` even though it lives in a different wrapper. Mobile keeps
+   .header-actions as a flex row and ignores all of this. */
 @media (min-width: 901px) {
-  .header-pinned .dropdown-wrap {
+  .header-actions {
+    display: contents;
+  }
+
+  .account-wrap {
     order: 1;
   }
 
-  .header-actions {
+  .header-pinned .dropdown-wrap {
     order: 2;
+  }
+
+  .header-actions .help-link {
+    order: 3;
   }
 }
 
@@ -537,12 +548,19 @@ main {
   border-color: #7d7568;
 }
 
-/* Flipped mode: both circles get the app's red outline plus a soft halo of the
-   same red, so the state reads at a glance without a heavier border. Painted
-   after the two data-color rules above and with an extra attribute in the
-   selector, so it wins over the per-colour border without needing !important.
-   The halo is a translucent spread of the same --wrong red, so the fill still
-   names the side and only the ring treatment changes. */
+/* The circles always carry a soft halo, in the colour of the flip state: a cool
+   blue normally, red while the board is flipped. That makes the two ends of the
+   board readable as a state pair at a glance, without a heavier border.
+
+   Painted after the two data-color rules above and with an extra attribute in
+   the selector, so it wins over the per-colour border without needing !important.
+   The fill still names the side, so only the ring treatment changes.
+
+   --accent-2 (#4c739e) and --wrong (#d05555) are the app's own blue and red. */
+.side-dot[data-color] {
+  box-shadow: 0 0 0 3px rgb(76 115 158 / 0.16), 0 0 7px 1px rgb(76 115 158 / 0.24);
+}
+
 .side-dot[data-color][data-flipped="true"] {
   border-color: var(--wrong);
   box-shadow: 0 0 0 3px rgb(208 85 85 / 0.18), 0 0 7px 1px rgb(208 85 85 / 0.28);
@@ -1042,12 +1060,27 @@ fieldset input[type="text"] {
     height: 1.8rem;
   }
 
+  /* Mobile dropdowns are a full-width sheet pinned below the header.
+     They used to be `position: fixed` here but inherited top:calc(100% + 10px)
+     from the rule above — and under `fixed` a percentage resolves against the
+     VIEWPORT, not the button, so the panel landed just off the bottom of the
+     screen and the button looked dead. Pinning an explicit `top` fixes that.
+
+     Fixed is also what lets the sheet escape the collapsed header's
+     overflow:hidden, so the account menu is not clipped by the fold. The header
+     is a single no-wrap row, so 3.4rem clears it whether it is collapsed or
+     expanded. */
   .menu {
     position: fixed;
+    top: 3.4rem;
     left: 0.5rem;
     right: 0.5rem;
     width: auto;
     max-width: none;
+    /* A tall menu, or a short viewport in landscape, scrolls rather than
+       running off the bottom. */
+    max-height: calc(100vh - 4.5rem);
+    overflow-y: auto;
   }
 
   .topbar {

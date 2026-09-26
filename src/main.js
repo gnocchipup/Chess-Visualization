@@ -217,9 +217,10 @@ function renderScore() {
 
 /**
  * Clear the correct/incorrect session counter. Changing what is being solved —
- * the puzzle set, the Lichess difficulty, or how much lead-up is shown (ply
- * back) — starts a new session, so results from the previous configuration
- * would otherwise be carried into the new one and misread as its accuracy.
+ * the puzzle source or set, the Lichess difficulty, or how much lead-up is
+ * shown (ply back) — starts a new session, so results from the previous
+ * configuration would otherwise be carried into the new one and misread as
+ * its accuracy.
  */
 function resetScore() {
   settings.clearResults();
@@ -573,8 +574,12 @@ if (NEXT_DIFFICULTIES.includes(settings.getDifficulty())) {
   els.difficultySelect.value = settings.getDifficulty();
 }
 els.sourceSelect.addEventListener('change', () => {
+  const before = settings.getSource();
   settings.setSource(els.sourceSelect.value);
   applySourceVisibility();
+  // Swapping the source swaps the whole puzzle pool, so counts from the old
+  // source say nothing about the new one — same reasoning as changing set.
+  if (settings.getSource() !== before) resetScore();
 });
 els.difficultySelect.addEventListener('change', () => {
   const before = settings.getDifficulty();

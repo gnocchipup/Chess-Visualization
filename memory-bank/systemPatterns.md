@@ -236,6 +236,22 @@ server behaviour (lichess-org/lila#20293), not a fetch bug. Reveals are delibera
 | localStorage | `cpt.lichessToken` | Serialized OAuth session (survives reloads) |
 | sessionStorage | `cpt.oauth.verifier`, `cpt.oauth.state` | PKCE verifier + CSRF state, deleted after exchange |
 
+**`cpt.results` is scoped to the current configuration, not merely to the session.**
+`main.js` exposes a single `resetScore()` (`settings.clearResults()` + `renderScore()`) that
+the puzzle-source, puzzle-set, difficulty, and ply-back `change` handlers all call, because
+results accumulated under a different source/set/difficulty/lead-up are not comparable to
+the new one. Source is on the list because switching `My sets` ↔ `Lichess next` swaps the
+entire puzzle pool, and the difficulty selector only means anything relative to the current
+source — a set swap and a source swap are the same kind of event.
+
+Two rules keep it from firing spuriously: the set handler resets only when the id actually
+differs from `activeSetId`, and the source/difficulty/ply handlers compare before/after
+rather than trusting the `change` event. A new setting that changes *what* is being solved
+should join that list rather than letting stale counts accumulate.
+
+The strip itself is fixed-width (`flex: 0 0 auto`, not `flex: 1 1 0`) so appending a
+result does not re-divide the row and shrink every existing marker.
+
 `listSets()` strips `bytes` for listing and sorts newest-first. `idb.js` opens and closes
 the DB per transaction, resolving on `complete` and rejecting on `error`/`abort`. The
 OAuth session is in-memory first; the localStorage copy exists only so a reload doesn't

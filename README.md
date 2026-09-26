@@ -171,9 +171,10 @@ at least one wrong attempt. Each bar is the same short width regardless of how m
 fills from the left instead of re-dividing the row on every new result. The header shows running
 `Solved · Failed` counts, and only the most recent 25 results are kept and displayed.
 
-The counter is scoped to the *current configuration*: changing the **puzzle set**, the Lichess
-**difficulty**, or **ply back** clears the results and the `Solved · Failed` counts, because scores from
-a previous set/difficulty/lead-up are not comparable to the new one.
+The counter is scoped to the *current configuration*: changing the puzzle **source** (My sets ↔
+Lichess next), the **puzzle set**, the Lichess **difficulty**, or **ply back** clears the results and
+the `Solved · Failed` counts, because scores from a previous source/set/difficulty/lead-up are not
+comparable to the new one.
 
 ## Architecture
 

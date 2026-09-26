@@ -8,7 +8,8 @@ The memory bank was **initialized on 2026-09-27** by reading the entire codebase
 
 **No feature work is in progress.** Polish continues: the latest change made the score
 strip markers fixed-width (no more re-dividing the row per result) and reset the
-correct/incorrect counter whenever puzzle set, difficulty, or ply back changes.
+correct/incorrect counter whenever puzzle source, puzzle set, difficulty, or ply back
+changes.
 
 ## Recent changes (most recent first, from git log)
 

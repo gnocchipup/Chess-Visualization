@@ -64,7 +64,12 @@ export function setFlipped(value) {
   localStorage.setItem(KEY_FLIPPED, value ? '1' : '0');
 }
 
-/** Session-scoped score, persisted in localStorage: array of booleans (true = clean solve). */
+/**
+ * Session score, persisted in localStorage: array of booleans (true = clean
+ * solve). Scoped to the current configuration — main.js calls clearResults() when
+ * the source, set, difficulty, or ply-back setting changes, since results from a
+ * different configuration are not comparable to this one.
+ */
 export function getResults() {
   try {
     const arr = JSON.parse(localStorage.getItem(KEY_RESULTS) || '[]');

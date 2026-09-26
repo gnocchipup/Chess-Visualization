@@ -145,14 +145,13 @@ sits above the board and another below it, naming the colour at each end — lig
 black — so you can see at a glance which side is which way round. Everything in the frame follows the
 orientation: flipping turns the letters round (`a`–`h` becomes `h`–`a`), reverses the numbers, and
 swaps the two circles, so each label always names the square it sits beside. While the board is
-flipped, both circles also get a red outline, so the state shows in the board frame as well as in
-the corner badge.
+flipped, both circles also get a red outline, so the state shows right in the board frame.
 
 Flipping only re-orients the static board: it does not change the position or the solving state. The
 flip is a **persisted preference** (`cpt.flipped`), so the next puzzle starts the same way round —
 flipped relative to *that* puzzle's auto-detected orientation, whichever colour it is for. While it
-is on, the button reads as pressed and a small **⇅ Flipped** badge sits in the board's top-left
-corner, so a turned board is never a surprise; flipping back to the default clears both.
+is on, the button reads as pressed and the two colour circles ring red, so a turned
+board is never a surprise; flipping back to the default clears both.
 
 #### Small screens
 

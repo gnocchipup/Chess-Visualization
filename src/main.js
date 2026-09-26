@@ -29,7 +29,6 @@ const els = {
   btnNew: $('btn-new'),
   btnFlip: $('btn-flip'),
   btnReveal: $('btn-reveal'),
-  flipBadge: $('board-flip-badge'),
   boardFiles: $('board-files'),
   boardRanks: $('board-ranks'),
   dotTop: $('board-dot-top'),
@@ -196,17 +195,17 @@ function renderScore() {
 /* ---------- board flip ---------- */
 
 /**
- * Mirror the flip preference onto the flip button and the small badge in the
- * board's corner. The button carries the state semantically (aria-pressed), and
- * the badge is the at-a-glance indicator — so the flipped state is still obvious
- * once the button has scrolled out of view under a long move table.
+ * Mirror the flip preference onto the flip button. The button carries the state
+ * semantically (aria-pressed) and visually; on the board frame itself the two
+ * colour circles turn their outlines red (see Exercise.paintSideDot), so the
+ * flipped state stays obvious once the button has scrolled out of view under a
+ * long move table.
  */
 function renderFlipState(flipped) {
   els.btnFlip.setAttribute('aria-pressed', String(flipped));
   els.btnFlip.title = flipped
     ? 'Unflip the board (F) — remembered for the next puzzle'
     : 'Flip the board 180° (F) — remembered for the next puzzle';
-  els.flipBadge.hidden = !flipped;
 }
 
 /* ---------- puzzle sets ---------- */

@@ -87,12 +87,6 @@
               <span id="board-dot-top" class="side-dot" aria-hidden="true"></span>
             </div>
             <div id="board-area" class="board-area">
-              <!-- Small indicator of the flipped state (see main.js renderFlipState).
-                   Purely visual: pointer-events:none in CSS keeps it from stealing
-                   drag/tap input aimed at the square underneath. -->
-              <span id="board-flip-badge" class="flip-badge" hidden>
-                <span class="flip-icon" aria-hidden="true">&#8645;</span>Flipped
-              </span>
               <div id="board" class="board" aria-label="Chess board"></div>
             </div>
             <div id="board-ranks" class="board-ranks" aria-hidden="true"></div>
@@ -117,8 +111,8 @@
             <button id="btn-new" class="btn-primary" type="button">New puzzle</button>
             <!-- Board flip sits beside the primary action because the F shortcut
                  is out of reach on a phone: the state is persisted (cpt.flipped)
-                 so the next puzzle starts the same way round, and it is mirrored
-                 by the small badge in the board's corner. -->
+                 so the next puzzle starts the same way round, and the two colour
+                 circles in the board frame turn their outlines red while it is on. -->
             <button
               id="btn-flip"
               type="button"

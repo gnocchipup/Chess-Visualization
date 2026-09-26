@@ -80,14 +80,15 @@ header h1,
   display: contents;
 }
 
-/* Desktop order: title on the left, then the account, the settings gear right
-   beside it, then help — the gear sits next to the name it configures rather
-   than out at the end of the row.
+/* Desktop: the title sits on the left and the three actions — account, settings
+   gear, help — are grouped together against the right edge.
 
-   .header-actions also becomes display:contents, so the account and the help
-   link are separate flex items of the header and the gear can slot between them
-   with `order` even though it lives in a different wrapper. Mobile keeps
-   .header-actions as a flex row and ignores all of this. */
+   The header is `justify-content: space-between`, which would spread those three
+   across the whole row (they are separate flex items once .header-actions is
+   display:contents). An auto left margin on the first of them absorbs all the
+   free space instead, which is what actually groups them: auto margins are
+   satisfied before space-between distributes anything, so the slack collapses
+   to zero between them and they end up adjacent under the header's own gap. */
 @media (min-width: 901px) {
   .header-actions {
     display: contents;
@@ -95,6 +96,7 @@ header h1,
 
   .account-wrap {
     order: 1;
+    margin-left: auto;
   }
 
   .header-pinned .dropdown-wrap {

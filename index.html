@@ -9,11 +9,51 @@
   <body>
     <div class="shell">
       <header id="app-header">
-        <h1 class="app-title">
-          <img class="app-logo" src="./noobvisualize.png" alt="" />
-          Chess Visualization for Noobs
-        </h1>
-        <div class="header-actions">
+        <!-- Collapsible header. On mobile it collapses to a slim bar holding just
+             the drag handle and the settings button (see HeaderCollapse in
+             src/layout.js); pulling the handle down expands the title, account
+             and help. On desktop both wrappers are display:contents, so the
+             header lays out exactly as if this markup were not here. -->
+        <div class="header-collapse" id="header-collapse">
+          <div class="header-collapse-inner" id="header-collapse-inner">
+            <h1 class="app-title">
+              <img class="app-logo" src="./noobvisualize.png" alt="" />
+              Chess Visualization for Noobs
+            </h1>
+            <div class="header-actions">
+              <div class="dropdown-wrap">
+                <button
+                  id="account-btn"
+                  class="account-btn"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="account-menu"
+                  title="Account"
+                >
+                  <span id="account-avatar" class="avatar" aria-hidden="true">G</span>
+                  <span id="account-name">Guest</span>
+                  <span class="caret" aria-hidden="true">&middot;</span>
+                </button>
+                <div id="account-menu" class="menu account-menu" hidden>
+                  <span id="auth-area" class="auth-area"></span>
+                </div>
+              </div>
+              <a class="icon-btn help-link" href="./readme.html" title="How to use">?</a>
+            </div>
+          </div>
+        </div>
+        <div class="header-pinned">
+          <button
+            id="header-handle"
+            class="header-handle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="header-collapse"
+            title="Pull down for the full header"
+          >
+            <span class="header-handle-grip" aria-hidden="true"></span>
+            <span class="sr-only">Show the full header</span>
+          </button>
           <div class="dropdown-wrap">
             <button
               id="btn-settings"
@@ -49,24 +89,6 @@
               <button id="btn-builder" class="menu-cta" type="button">Puzzle sets&hellip;</button>
             </div>
           </div>
-          <div class="dropdown-wrap">
-            <button
-              id="account-btn"
-              class="account-btn"
-              type="button"
-              aria-expanded="false"
-              aria-controls="account-menu"
-              title="Account"
-            >
-              <span id="account-avatar" class="avatar" aria-hidden="true">G</span>
-              <span id="account-name">Guest</span>
-              <span class="caret" aria-hidden="true">&middot;</span>
-            </button>
-            <div id="account-menu" class="menu account-menu" hidden>
-              <span id="auth-area" class="auth-area"></span>
-            </div>
-          </div>
-          <a class="icon-btn help-link" href="./readme.html" title="How to use">?</a>
         </div>
       </header>
 

@@ -68,6 +68,49 @@ header h1,
   gap: 0.5rem;
 }
 
+/* Collapsible header. On desktop both wrappers are display:contents, so the
+   header keeps its exact previous layout (title left, actions right) and the
+   collapse is inert. Only the mobile media query below turns this into a real
+   collapsed bar, and it keys off the .header-collapse-ready class that
+   src/layout.js adds — so a page where the script never ran (or threw) still
+   shows a plain, fully visible header rather than an unreachable one. */
+.header-collapse,
+.header-collapse-inner,
+.header-pinned {
+  display: contents;
+}
+
+/* Desktop order: the title, then the settings button, then account + help —
+   the same left-to-right run as before the header became collapsible. The
+   wrappers are display:contents here, so their children are the header's flex
+   items and can be ordered directly. Mobile stacks the header instead and does
+   not use these. */
+@media (min-width: 901px) {
+  .header-pinned .dropdown-wrap {
+    order: 1;
+  }
+
+  .header-actions {
+    order: 2;
+  }
+}
+
+.header-handle {
+  display: none;
+}
+
+/* Visually hidden but still announced by a screen reader. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .icon-btn,
 .account-btn {
   display: inline-flex;
@@ -473,8 +516,8 @@ main {
 }
 
 .side-dot {
-  width: 0.62rem;
-  height: 0.62rem;
+  width: 0.72rem;
+  height: 0.72rem;
   border-radius: 50%;
   border: 1px solid var(--border);
   /* Unpainted = no puzzle on the board yet, so there is no side to show. The
@@ -494,12 +537,15 @@ main {
   border-color: #7d7568;
 }
 
-/* Flipped mode: both circles get the app's red outline. Painted after the two
-   data-color rules above and with an extra attribute in the selector, so it
-   wins over the per-colour border without needing !important. The fill still
-   names the side, so only the ring changes. */
+/* Flipped mode: both circles get the app's red outline plus a soft halo of the
+   same red, so the state reads at a glance without a heavier border. Painted
+   after the two data-color rules above and with an extra attribute in the
+   selector, so it wins over the per-colour border without needing !important.
+   The halo is a translucent spread of the same --wrong red, so the fill still
+   names the side and only the ring treatment changes. */
 .side-dot[data-color][data-flipped="true"] {
   border-color: var(--wrong);
+  box-shadow: 0 0 0 3px rgb(208 85 85 / 0.18), 0 0 7px 1px rgb(208 85 85 / 0.28);
 }
 
 .board {
@@ -887,8 +933,105 @@ fieldset input[type="text"] {
 
   header {
     flex-wrap: wrap;
+    /* The collapsed bar is a touch target for a downward drag, so the browser
+       must not turn the gesture into a page scroll. */
+    touch-action: pan-x;
   }
 
+  /* ---- collapsible header (mobile only) ----
+     Collapsed by default on a phone: the header shows just the drag grip and the
+     settings button, and the rest (title, account, help) folds away to give the
+     board the vertical space. Pulling the grip down unfolds it again.
+
+     The 0fr -> 1fr grid-row trick animates to the content's real height without
+     hardcoding a pixel value, so the folded content can be any height. While a
+     drag is in progress, src/layout.js writes the row height inline instead so
+     the panel tracks the finger; the transition is disabled for that duration
+     (.header-dragging) and the class-driven resting state takes over on release.
+
+     Everything is scoped to .header-collapse-ready, which src/layout.js adds —
+     without it the header is always fully shown, so a script failure degrades to
+     a plain header rather than a hidden one. */
+  .header-collapse-ready header {
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    gap: 0.5rem;
+  }
+
+  .header-collapse-ready .header-collapse {
+    display: grid;
+    /* Collapsed: the row is 0fr and the inner clips to nothing. */
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.22s ease;
+    min-width: 0;
+  }
+
+  .header-collapse-ready header.header-open .header-collapse {
+    grid-template-rows: 1fr;
+  }
+
+  /* A drag sets the row height by hand; easing it would lag the finger. */
+  .header-collapse-ready header.header-dragging .header-collapse {
+    transition: none;
+  }
+
+  .header-collapse-inner {
+    overflow: hidden;
+    /* Without this a flex/grid child refuses to shrink below its content, and
+       the collapsed row would keep its full height. */
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .header-collapse-ready .header-pinned {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+  }
+
+  /* The grip: a wide, short, obviously grabbable strip. */
+  .header-collapse-ready .header-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 1.6rem;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .header-collapse-ready .header-handle:active {
+    cursor: grabbing;
+  }
+
+  .header-handle-grip {
+    width: 0.9rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--muted);
+  }
+
+  /* Expanded: the inner row is the old header, so the title shrinks but stays. */
+  .header-collapse-ready header.header-open .app-title {
+    font-size: 0.9rem;
+  }
+
+  .header-collapse-ready header.header-open .app-logo {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  /* Collapsed, the title is gone but the settings button must stay reachable,
+     so it is the one child that never folds away. */
   header h1,
   .app-title {
     font-size: 1rem;

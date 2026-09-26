@@ -59,6 +59,47 @@ export function resolveDrawerOpen({ startOpen, dy, panelHeight }) {
 }
 
 
+/**
+ * Collapse/expand the header on a narrow screen.
+ *
+ * On a phone the header is worth more as board space than as a toolbar, so it
+ * collapses to a slim bar holding just a drag grip and the settings button.
+ * Pulling the grip down unfolds the title, account and help; pushing it back up,
+ * tapping the grip, tapping outside, or pressing Escape collapses it again.
+ *
+ * Like TopBar, the geometry is pure and offline-testable
+ * (scripts/verify-topbar.mjs): progress is a single fraction where 0 = fully
+ * collapsed and 1 = fully expanded, and the only judgement call is where a
+ * released drag comes to rest.
+ */
+
+/** Clamp collapse progress to the 0..1 range, so it can never overshoot. */
+export function clampCollapseProgress(progress) {
+  if (!Number.isFinite(progress)) return 0;
+  return Math.min(1, Math.max(0, progress));
+}
+
+/** Progress a pointer drag has reached, from the progress it started at. */
+export function collapseProgress({ startProgress, dy, travel }) {
+  if (!Number.isFinite(travel) || travel <= 0) return clampCollapseProgress(startProgress);
+  return clampCollapseProgress(startProgress + dy / travel);
+}
+
+/**
+ * Resting state a released drag settles into: expanded once the header has been
+ * pulled more than halfway out, collapsed otherwise. A tie collapses, so a
+ * barely-committed drag never leaves the header open over the board.
+ */
+export function resolveCollapseOpen({ startProgress, dy, travel }) {
+  if (!Number.isFinite(travel) || travel <= 0) return false;
+  return collapseProgress({ startProgress, dy, travel }) > 0.5;
+}
+
+/** Progress implied by a resting state, for starting the next drag from it. */
+export function restingProgress(open) {
+  return open ? 1 : 0;
+}
+
 export class TopBar {
   constructor({ headerEl, bodyEl, topbarEl, handleEl }) {
     this.headerEl = headerEl;
@@ -231,6 +272,178 @@ export class TopBar {
   releaseDrag() {
     document.body.classList.remove('drawer-dragging');
     this.headerEl.style.removeProperty('--drawer-drag-y');
+  }
+}
+
+export class HeaderCollapse {
+  constructor({ headerEl, collapseEl, innerEl, handleEl }) {
+    this.headerEl = headerEl;
+    this.collapseEl = collapseEl;
+    this.innerEl = innerEl;
+    this.handleEl = handleEl;
+
+    this.mq = window.matchMedia(MOBILE_QUERY);
+    this.mobile = this.mq.matches;
+    // Collapsed on load: the board keeps the space until asked for. Desktop
+    // ignores this (every rule is media-scoped).
+    this.open = false;
+    this.progress = restingProgress(false);
+    this.travel = 0; // px between collapsed and expanded, measured
+
+    this.gesture = null; // { startY, startProgress } while a pointer is down
+    this.dragging = false;
+    this.suppressClick = false;
+
+    this.onPointerDown = (e) => this.startDrag(e);
+    this.onPointerMove = (e) => this.moveDrag(e);
+    this.onPointerUp = (e) => this.endDrag(e);
+    this.onPointerCancel = () => this.cancelDrag();
+    this.onClick = () => this.toggle();
+    this.onKeyDown = (e) => {
+      if (e.key === 'Escape' && this.mobile && this.open) this.setOpen(false);
+    };
+    this.onOutsideDown = (e) => {
+      if (this.mobile && this.open && !this.headerEl.contains(e.target)) this.setOpen(false);
+    };
+    this.onViewportChange = () => this.refresh();
+
+    this.handleEl.addEventListener('pointerdown', this.onPointerDown);
+    this.handleEl.addEventListener('pointermove', this.onPointerMove);
+    this.handleEl.addEventListener('pointerup', this.onPointerUp);
+    this.handleEl.addEventListener('pointercancel', this.onPointerCancel);
+    this.handleEl.addEventListener('click', this.onClick);
+    document.addEventListener('pointerdown', this.onOutsideDown);
+    document.addEventListener('keydown', this.onKeyDown);
+    this.mq.addEventListener('change', this.onViewportChange);
+    window.addEventListener('resize', this.onViewportChange);
+
+    // Enables the collapsed bar. A page where this script never ran keeps a
+    // plain always-visible header instead of an unreachable one.
+    document.documentElement.classList.add('header-collapse-ready');
+
+    // The unfolded height depends on the title and the account name, both of
+    // which can change after first layout (sign-in, font load).
+    if (typeof ResizeObserver !== 'undefined') {
+      this.observer = new ResizeObserver(() => this.measure());
+      this.observer.observe(this.innerEl);
+    }
+
+    this.refresh();
+  }
+
+  /** Re-measure after a viewport change and drop any mobile leftovers. */
+  refresh() {
+    this.mobile = this.mq.matches;
+    if (!this.mobile) {
+      this.open = false;
+      this.progress = restingProgress(false);
+      this.gesture = null;
+      this.dragging = false;
+      this.releaseDrag();
+    }
+    this.measure();
+    this.applyState();
+  }
+
+  /**
+   * Measure how far the header travels between collapsed and expanded.
+   * `scrollHeight` is used rather than `offsetHeight` because the collapsed row
+   * is 0fr, which clips the box but not the content inside it.
+   */
+  measure() {
+    const travel = this.innerEl.scrollHeight;
+    if (travel === this.travel) return;
+    this.travel = travel;
+  }
+
+  setOpen(open) {
+    this.open = !!open;
+    this.progress = restingProgress(this.open);
+    this.applyState();
+  }
+
+  close() {
+    this.setOpen(false);
+  }
+
+  applyState() {
+    this.headerEl.classList.toggle('header-open', this.open && this.mobile);
+    this.handleEl.setAttribute('aria-expanded', String(this.open && this.mobile));
+  }
+
+  /** Write a drag position to the row height, inline so CSS can follow it. */
+  applyProgress(progress) {
+    this.progress = clampCollapseProgress(progress);
+    this.collapseEl.style.gridTemplateRows = `${this.progress * this.travel}px`;
+  }
+
+  toggle() {
+    // The browser still fires a click after a drag on the same element.
+    if (this.suppressClick) {
+      this.suppressClick = false;
+      return;
+    }
+    if (!this.mobile) return;
+    this.setOpen(!this.open);
+  }
+
+  startDrag(e) {
+    if (!this.mobile) return;
+    if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    this.measure();
+    this.gesture = { startY: e.clientY, startProgress: this.progress };
+    this.dragging = false;
+    this.suppressClick = false;
+    this.handleEl.setPointerCapture?.(e.pointerId);
+  }
+
+  moveDrag(e) {
+    if (!this.mobile || !this.gesture || !e.isPrimary) return;
+    const dy = e.clientY - this.gesture.startY;
+    if (!this.dragging) {
+      if (Math.abs(dy) < TAP_SLOP) return;
+      // Only now is this a drag: freezing the transition at pointerdown would
+      // snap a header that was still animating.
+      this.dragging = true;
+      this.headerEl.classList.add('header-dragging');
+    }
+    e.preventDefault();
+    this.applyProgress(
+      collapseProgress({ startProgress: this.gesture.startProgress, dy, travel: this.travel })
+    );
+  }
+
+  endDrag(e) {
+    if (!this.mobile || !this.gesture || !e.isPrimary) return;
+    const startProgress = this.gesture.startProgress;
+    const dy = e.clientY - this.gesture.startY;
+    const dragged = this.dragging;
+    this.gesture = null;
+    this.dragging = false;
+    if (!dragged) return; // a tap: the click handler toggles instead
+    const open = resolveCollapseOpen({ startProgress, dy, travel: this.travel });
+    // Drop the inline height and let the class-driven resting state take over,
+    // so the panel tweens from where the finger left it.
+    this.releaseDrag();
+    this.setOpen(open);
+    this.suppressClick = true;
+    requestAnimationFrame(() => {
+      this.suppressClick = false;
+    });
+  }
+
+  cancelDrag() {
+    if (!this.gesture) return;
+    this.gesture = null;
+    this.dragging = false;
+    this.releaseDrag();
+    this.applyState();
+  }
+
+  /** Hand the row height back to the class-driven resting state. */
+  releaseDrag() {
+    this.headerEl.classList.remove('header-dragging');
+    this.collapseEl.style.removeProperty('grid-template-rows');
   }
 }
 

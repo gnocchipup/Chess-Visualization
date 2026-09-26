@@ -7,7 +7,16 @@
 // decision the DOM code makes is which side of that range a drag settles on.
 // The pointer plumbing itself (layout.js `TopBar`) needs a browser and is not
 // covered here; `isKeyboardFirst` needs window.matchMedia and is not either.
-import { clampDrawerOffset, resolveDrawerOpen, MOBILE_QUERY, TAP_SLOP } from '../src/layout.js';
+import {
+  clampDrawerOffset,
+  resolveDrawerOpen,
+  clampCollapseProgress,
+  collapseProgress,
+  resolveCollapseOpen,
+  restingProgress,
+  MOBILE_QUERY,
+  TAP_SLOP,
+} from '../src/layout.js';
 
 let failures = 0;
 const check = (label, cond, extra = '') => {
@@ -72,6 +81,64 @@ check('negative panel height is treated as 0', clampDrawerOffset(10, -20) === 0)
 // 8. The JS gate is the same breakpoint as the CSS media query; pin it so the
 //    two cannot drift apart without failing here.
 check('breakpoint matches the CSS media query', MOBILE_QUERY === '(max-width: 900px)', MOBILE_QUERY);
+
+// 9. Collapsible header (mobile): progress is a fraction, 0 = collapsed,
+//    1 = expanded, and the drag maths must stay inside that range.
+const TRAVEL = 60; // px between collapsed and expanded
+
+check('progress starts collapsed and ends expanded', restingProgress(false) === 0 && restingProgress(true) === 1);
+
+check(
+  'a full pull down reaches fully expanded',
+  collapseProgress({ startProgress: 0, dy: TRAVEL, travel: TRAVEL }) === 1
+);
+check(
+  'progress cannot overshoot either end',
+  collapseProgress({ startProgress: 0, dy: 5000, travel: TRAVEL }) === 1 &&
+    collapseProgress({ startProgress: 1, dy: -5000, travel: TRAVEL }) === 0
+);
+check(
+  'a half pull lands halfway',
+  collapseProgress({ startProgress: 0, dy: TRAVEL / 2, travel: TRAVEL }) === 0.5
+);
+
+// 10. Where a released header drag settles. Same halfway rule as the drawer:
+//     a tie collapses, so a barely-committed pull never leaves the header open.
+check(
+  'pull down less than halfway stays collapsed',
+  resolveCollapseOpen({ startProgress: 0, dy: 20, travel: TRAVEL }) === false
+);
+check(
+  'pull down past halfway expands',
+  resolveCollapseOpen({ startProgress: 0, dy: 40, travel: TRAVEL }) === true
+);
+check(
+  'exactly halfway collapses',
+  resolveCollapseOpen({ startProgress: 0, dy: TRAVEL / 2, travel: TRAVEL }) === false
+);
+check(
+  'pushing up from expanded past halfway collapses it',
+  resolveCollapseOpen({ startProgress: 1, dy: -40, travel: TRAVEL }) === false
+);
+check(
+  'a short push up from expanded leaves it open',
+  resolveCollapseOpen({ startProgress: 1, dy: -20, travel: TRAVEL }) === true
+);
+check(
+  'no movement keeps the header where it was',
+  resolveCollapseOpen({ startProgress: 1, dy: 0, travel: TRAVEL }) === true &&
+    resolveCollapseOpen({ startProgress: 0, dy: 0, travel: TRAVEL }) === false
+);
+
+// 11. An unmeasured header (travel 0, e.g. before first layout) must not divide
+//     by zero, produce NaN, or open itself on a stray touch.
+check(
+  'zero travel keeps the current state instead of NaN',
+  collapseProgress({ startProgress: 0, dy: 50, travel: 0 }) === 0 &&
+    resolveCollapseOpen({ startProgress: 0, dy: 50, travel: 0 }) === false
+);
+check('negative travel is treated as unmeasured', clampCollapseProgress(collapseProgress({ startProgress: 1, dy: -10, travel: -5 })) === 1);
+check('NaN progress clamps to collapsed', clampCollapseProgress(NaN) === 0);
 
 // NOTE: no process.exit() — see scripts/verify-drag.mjs.
 process.exitCode = failures ? 1 : 0;

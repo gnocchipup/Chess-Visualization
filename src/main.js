@@ -4,7 +4,7 @@ import * as settings from './settings.js';
 import * as idb from './idb.js';
 import { openSet, randomPuzzle, inspectSet } from './sqlsets.js';
 import { buildSet, saveSqliteFile, MAX_SAFE_PUZZLES } from './builder.js';
-import { TopBar } from './layout.js';
+import { TopBar, HeaderCollapse } from './layout.js';
 import { fetchNextPuzzle, reportResult, NEXT_DIFFICULTIES } from './lichess.js';
 import * as auth from './auth.js';
 
@@ -14,6 +14,9 @@ const els = {
   headerBody: $('header-body'),
   topbar: $('topbar'),
   drawerToggle: $('drawer-toggle'),
+  headerCollapse: $('header-collapse'),
+  headerCollapseInner: $('header-collapse-inner'),
+  headerHandle: $('header-handle'),
   btnSettings: $('btn-settings'),
   settingsMenu: $('settings-menu'),
   accountBtn: $('account-btn'),
@@ -69,6 +72,26 @@ try {
   }
 } catch {
   topBar = null;
+}
+
+// Narrow-screen header: collapses to a slim bar (drag grip + settings button)
+// and unfolds in place when the grip is pulled down. The settings dropdown itself
+// is untouched — the button is pinned outside the folding region, so it stays
+// reachable whether the header is collapsed or not. Desktop is unaffected: every
+// collapse rule is media-scoped, and without the class this adds, a header whose
+// script never ran is simply always shown.
+let headerCollapse = null;
+try {
+  if (els.appHeader && els.headerCollapse && els.headerCollapseInner && els.headerHandle) {
+    headerCollapse = new HeaderCollapse({
+      headerEl: els.appHeader,
+      collapseEl: els.headerCollapse,
+      innerEl: els.headerCollapseInner,
+      handleEl: els.headerHandle,
+    });
+  }
+} catch {
+  headerCollapse = null;
 }
 
 function closeMenus(except = null) {
@@ -454,6 +477,7 @@ async function onNewPuzzle() {
   if (busy) return;
   closeMenus();
   topBar?.close(); // solving needs the board, not the settings
+  headerCollapse?.close(); // and the board beats header chrome on a phone
   busy = true;
   els.btnNew.disabled = true;
   els.btnNew.textContent = 'New puzzle';

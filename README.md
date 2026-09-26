@@ -60,7 +60,7 @@ committed.
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
 | `npm test` | Runs `test:topbar`, `test:flip`, `test:coords`, `test:next`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
-| `npm run test:topbar` | Legacy drawer geometry (pure logic, runs offline) |
+| `npm run test:topbar` | Header-collapse + legacy drawer geometry (pure logic, runs offline) |
 | `npm run test:flip` | Board-orientation rules + the persisted flip preference (pure logic, runs offline) |
 | `npm run test:coords` | Board coordinates + colour circles (pure logic, runs offline) |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
@@ -184,7 +184,7 @@ index.html                     entry point + static markup
     │   ├── src/board.js       FEN -> static 8x8 SVG board + the frame's coordinate gutters
     │   └── src/orientation.js board orientation, coordinate order and side colours (pure logic, unit-tested)
     ├── src/pieces/            Cburnett SVG piece set (see Licenses)
-    ├── src/layout.js          legacy narrow-screen drawer (inert; pure geometry, unit-tested)
+    ├── src/layout.js          narrow-screen header collapse (drag to unfold) + legacy drawer (pure geometry, unit-tested)
     └── src/style.css
 ```
 
@@ -206,7 +206,7 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 
 ```
 scripts/
-├── verify-topbar.mjs       — legacy drawer geometry (pure logic, offline)
+├── verify-topbar.mjs       — header-collapse + legacy drawer geometry (pure logic, offline)
 ├── verify-flip.mjs         — orientation rules + the persisted flip (pure logic, offline)
 ├── verify-coords.mjs       — board coordinates + colour circles (pure logic, offline)
 ├── verify-yh7ub.mjs        — ply-alignment acceptance test (puzzle Yh7uB, live API)

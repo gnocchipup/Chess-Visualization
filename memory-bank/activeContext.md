@@ -6,9 +6,9 @@ The memory bank was **initialized on 2026-09-27** by reading the entire codebase
 (`index.html`, all 13 `src/` modules, all 9 `scripts/`, `README.md`, `specs.md`,
 `vite.config.js`, `package.json`, the deploy workflow) and the git history.
 
-**No feature work is in progress.** The tree is clean on `main` at
-`726701f "Header layout, tighter icons"`. The recent trajectory is UI polish, not new
-functionality.
+**No feature work is in progress.** Polish continues: the latest change made the score
+strip markers fixed-width (no more re-dividing the row per result) and reset the
+correct/incorrect counter whenever puzzle set, difficulty, or ply back changes.
 
 ## Recent changes (most recent first, from git log)
 

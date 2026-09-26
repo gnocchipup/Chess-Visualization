@@ -403,16 +403,20 @@ a.icon-btn.help-link:hover {
 
 .score-strip {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   padding: 0.45rem 1.1rem 0.2rem;
   min-height: 8px;
   flex-wrap: nowrap;
+  justify-content: flex-start;
   overflow: hidden;
 }
 
+/* Fixed-width markers: each result is the same short bar no matter how many
+   have accumulated, so the strip grows to the right instead of re-dividing the
+   full row width on every new puzzle. */
 .score-strip .sq-result {
-  flex: 1 1 0;
-  min-width: 6px;
+  flex: 0 0 auto;
+  width: 14px;
   height: 7px;
   border-radius: 999px;
   background: #555;

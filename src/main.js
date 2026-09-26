@@ -215,6 +215,17 @@ function renderScore() {
   }
 }
 
+/**
+ * Clear the correct/incorrect session counter. Changing what is being solved —
+ * the puzzle set, the Lichess difficulty, or how much lead-up is shown (ply
+ * back) — starts a new session, so results from the previous configuration
+ * would otherwise be carried into the new one and misread as its accuracy.
+ */
+function resetScore() {
+  settings.clearResults();
+  renderScore();
+}
+
 /* ---------- board flip ---------- */
 
 /**
@@ -525,13 +536,18 @@ els.importFile.addEventListener('change', onImport);
 
 els.setSelect.addEventListener('change', async () => {
   const id = els.setSelect.value || null;
-  if (id !== activeSetId) await activateSet(id);
+  if (id !== activeSetId) {
+    await activateSet(id);
+    resetScore();
+  }
 });
 
 els.plyBack.value = String(settings.getPlyBack());
 els.plyBack.addEventListener('change', () => {
+  const before = settings.getPlyBack();
   settings.setPlyBack(els.plyBack.value);
   els.plyBack.value = String(settings.getPlyBack());
+  if (settings.getPlyBack() !== before) resetScore();
 });
 
 // Source picker: local puzzle sets (default, unchanged) vs Lichess next
@@ -561,7 +577,9 @@ els.sourceSelect.addEventListener('change', () => {
   applySourceVisibility();
 });
 els.difficultySelect.addEventListener('change', () => {
+  const before = settings.getDifficulty();
   settings.setDifficulty(els.difficultySelect.value);
+  if (settings.getDifficulty() !== before) resetScore();
 });
 applySourceVisibility();
 

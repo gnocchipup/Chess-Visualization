@@ -68,6 +68,9 @@ working tree clean apart from the untracked `.clinerules/` folder.
 - [x] Green/red strip, session-scoped, `cpt.results`
 - [x] `Solved · Failed` counts in the header
 - [x] Capped at the most recent 25
+- [x] Fixed-width markers (`flex: 0 0 auto; width: 14px`) — no longer `flex: 1 1 0`, which
+      re-divided the full row width on every new result
+- [x] Counter resets when puzzle set, Lichess difficulty, or ply back changes
 
 ### Gotcha handling — **all seven**
 

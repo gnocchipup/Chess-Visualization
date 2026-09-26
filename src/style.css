@@ -496,6 +496,14 @@ main {
   border-color: #7d7568;
 }
 
+/* Flipped mode: both circles get the app's red outline. Painted after the two
+   data-color rules above and with an extra attribute in the selector, so it
+   wins over the per-colour border without needing !important. The fill still
+   names the side, so only the ring changes. */
+.side-dot[data-color][data-flipped="true"] {
+  border-color: var(--wrong);
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);

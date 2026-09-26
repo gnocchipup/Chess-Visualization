@@ -144,7 +144,9 @@ the right edge**, both outside the playing area so they never cover a piece. A s
 sits above the board and another below it, naming the colour at each end — light for white, dark for
 black — so you can see at a glance which side is which way round. Everything in the frame follows the
 orientation: flipping turns the letters round (`a`–`h` becomes `h`–`a`), reverses the numbers, and
-swaps the two circles, so each label always names the square it sits beside.
+swaps the two circles, so each label always names the square it sits beside. While the board is
+flipped, both circles also get a red outline, so the state shows in the board frame as well as in
+the corner badge.
 
 Flipping only re-orients the static board: it does not change the position or the solving state. The
 flip is a **persisted preference** (`cpt.flipped`), so the next puzzle starts the same way round —

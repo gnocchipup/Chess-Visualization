@@ -313,9 +313,12 @@ export class Exercise {
    * relationship as the rank numbers running down the board's right edge, so
    * the circles always agree with the coordinates. The colour is published as
    * data-color, which is also what reveals a circle (CSS keeps an unpainted dot
-   * invisible), and the title spells the side out in words. Both circles stay
-   * aria-hidden: the board's own aria-label already names both ends (see
-   * updateBoardLabels), so announcing them again would only double up.
+   * invisible), and the title spells the side out in words. A flipped board
+   * additionally rings both circles in the app's red (data-flipped), so the
+   * state is readable from the board frame alone, mirroring the corner badge.
+   * Both circles stay aria-hidden: the board's own aria-label already names
+   * both ends (see updateBoardLabels), so announcing them again would only
+   * double up.
    */
   paintSideDots() {
     this.paintSideDot(this.topDotEl, topColor(this.orientation), 'top');
@@ -326,6 +329,9 @@ export class Exercise {
     if (!el) return;
     const name = color === BLACK ? 'Black' : 'White';
     el.dataset.color = color;
+    // Red outline in flipped mode. Set every time (not only when true) so a
+    // puzzle that starts unflipped after a flipped one loses the ring.
+    el.dataset.flipped = String(!!this.flipped);
     el.title = `${name} is at the ${end} of the board`;
   }
 

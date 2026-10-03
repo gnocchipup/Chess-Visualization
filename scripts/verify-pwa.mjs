@@ -127,6 +127,8 @@ const manifest = await evaluate(`
     status: res.status,
     name: body.name,
     start_url: body.start_url,
+    scope: body.scope,
+    id: body.id,
     display: body.display,
     has192: body.icons.some((i) => i.sizes === '192x192'),
     has512: body.icons.some((i) => i.sizes === '512x512' && i.purpose === 'any'),
@@ -137,10 +139,36 @@ check('index.html links a manifest', manifest.linked);
 check('manifest fetches 200', manifest.status === 200);
 check('manifest has a name', !!manifest.name, manifest.name);
 check('start_url is relative (subpath deploys)', manifest.start_url === './', manifest.start_url);
+check('scope is relative (subpath deploys)', manifest.scope === './', manifest.scope);
 check('display is standalone', manifest.display === 'standalone');
 check('192x192 icon present (Android install requirement)', manifest.has192);
 check('512x512 "any" icon present', manifest.has512);
 check('maskable icon present (adaptive icons)', manifest.maskable);
+
+// The app identity that makes a second install on the SAME origin possible.
+// Chrome keys an installed app by origin+id, so a relative id (".") collides
+// with any other PWA served from the same host — which is exactly what happened
+// when this app could not be installed on Android alongside another project
+// under the same github.io address.
+console.log('\n1b. App id is distinct, so two apps can share one origin');
+const idUrl = new URL(manifest.id, 'https://gnocchipup.github.io/').href;
+check('id is present', !!manifest.id, manifest.id);
+check(
+  'id is an absolute path naming the repo, not a bare "."',
+  manifest.id.startsWith('/') && manifest.id === '/Chess-Visualization/',
+  manifest.id,
+);
+check(
+  'id resolves to the full origin + path (never collides with a sibling app)',
+  idUrl === 'https://gnocchipup.github.io/Chess-Visualization/',
+  idUrl,
+);
+check(
+  'id is same-origin when resolved against the deploy host',
+  new URL(manifest.id, 'https://gnocchipup.github.io/Chess-Visualization/').origin ===
+    'https://gnocchipup.github.io',
+);
+check('id is not merely a copy of start_url', manifest.id !== manifest.start_url);
 
 console.log('\n2. Manifest icon files actually resolve');
 const icons = await evaluate(`

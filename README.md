@@ -438,6 +438,29 @@ error. That is deliberate; see the first bullet under [Known limitations](#known
 To ship an update to an already-installed app, bump `VERSION` in `public/sw.js`. The new worker
 drops the old cache on activate.
 
+### If you install another app on the same address
+
+Several of these projects share one GitHub Pages origin (`gnocchipup.github.io`), each under its
+own subpath. Browsers identify an installed app by **origin + the manifest's `id`**, so two apps on
+one origin with a relative `id` collide — the second install appears to do nothing, or replaces the
+first. This app therefore declares:
+
+```json
+"id": "/Chess-Visualization/"
+```
+
+Two details matter:
+
+- **`id` resolves against the origin, not the app's folder.** A bare `"./"` merely collapses to the
+  app's own directory, which is not distinct enough to disambiguate a shared origin; naming the repo
+  is what makes it unique.
+- **`id` need not be under `scope`,** and it survives moving to a different folder, since only the
+  origin has to match. `start_url` and `scope` stay `"./"` so the relative-`base` build still works
+  from any subpath.
+
+If this app is ever served from a different path or host, update `id` to match, or it will again
+collide with whatever else lives on that origin. `npm run test:pwa` asserts the exact value.
+
 ## Known limitations
 
 - **No offline mode.** If the Lichess API is unreachable the app shows a retryable error and will not

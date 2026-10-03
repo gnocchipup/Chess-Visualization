@@ -24,7 +24,12 @@ body {
   font-family: "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  padding: 1.25rem 1rem 2rem;
+  /* max() keeps the original spacing as the floor and only adds the inset, so
+     the installed (standalone) window does not tuck the header under the
+     Android status bar or an iOS notch. The insets are 0 in a normal browser
+     tab, so this is inert outside an installed app. */
+  padding: max(1.25rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
 }
 
 /* Mock shell: everything lives in one bordered card. */
@@ -216,6 +221,24 @@ header h1,
   margin: 0.7rem 0;
 }
 
+/* The UA stylesheet's `[hidden] { display: none }` is a plain author-level
+   declaration, so any rule that sets `display` on the same element beats it.
+   `.menu-row` sets `display: flex`, which silently defeated the `hidden`
+   attribute on the set/difficulty rows — they stayed on screen regardless of
+   what main.js asked for. Restating it for the row and CTA keeps the
+   attribute authoritative, which is the whole mechanism the conditional
+   source rows rely on. */
+.menu-row[hidden],
+.menu-cta[hidden] {
+  display: none;
+}
+
+/* The builder CTA follows the picker rows directly, so it needs the same
+   top breathing room the `.menu-sep` used to give it. */
+.builder-cta {
+  margin-top: 0.55rem;
+}
+
 .menu-cta {
   width: 100%;
   background: var(--accent);
@@ -351,6 +374,16 @@ button:disabled {
 .score b {
   color: var(--text);
   font-weight: 700;
+}
+
+/* "+42 older" — the count of attempts that have scrolled off the capped strip.
+   Deliberately the faintest thing in the row: it is context for reading the
+   totals, not a number the solver is meant to act on. */
+.score-more {
+  font-size: 0.78rem;
+  color: var(--muted);
+  opacity: 0.75;
+  white-space: nowrap;
 }
 
 /* The Solved/Failed counts and the reset button share one row, so the pair stays

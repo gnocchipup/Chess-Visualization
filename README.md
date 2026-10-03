@@ -26,6 +26,8 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
   **Reveal solution** button only appears once you've asked for a hint.
 - **Small-screen layout** — below 900 px the board and the side panel stack, and the header
   collapses its labels so **New puzzle** and the puzzle link stay reachable.
+- **Installable app (PWA)** — a web app manifest plus a service worker let you install it on
+  Android and desktop; see [Install as an app](#install-as-an-app).
 
 ## Requirements
 
@@ -61,14 +63,16 @@ committed.
 | `npm run dev` | Vite dev server with hot module replacement |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built `dist/` at <http://localhost:4173> |
-| `npm test` | Runs `test:topbar`, `test:flip`, `test:coords`, `test:next`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
+| `npm test` | Runs `test:topbar`, `test:flip`, `test:coords`, `test:score`, `test:next`, `test:ply`, `test:loop`, `test:orient`, then `test:drag` |
 | `npm run test:topbar` | Header-collapse + legacy drawer geometry (pure logic, runs offline) |
 | `npm run test:flip` | Board-orientation rules + the persisted flip preference (pure logic, runs offline) |
 | `npm run test:coords` | Board coordinates + colour circles (pure logic, runs offline) |
+| `npm run test:score` | Score totals vs the capped strip (pure logic, runs offline) |
 | `npm run test:ply` | Acceptance test for ply alignment (puzzle `Yh7uB`) |
 | `npm run test:loop` | Solving-loop logic tests |
 | `npm run test:orient` | Board-orientation rule against live puzzles |
 | `npm run test:drag` | Square-to-square drag-input logic tests |
+| `npm run test:pwa` | Manifest, service worker, and the conditional settings-menu rows (needs `npm run preview`) |
 | `npm run smoke` | Smoke test a *running* preview server (see [Testing](#testing)) |
 
 ## Using it
@@ -97,8 +101,19 @@ An in-memory sql.js database gets uncomfortable past ~50,000 puzzles, so the bui
 
 ### 2. Solve a puzzle
 
-Pick a set in the header, then press **New puzzle** under the move table. Each puzzle is fetched
-live from the Lichess API.
+Press **New puzzle** under the move table. Each puzzle is fetched live from the Lichess API.
+
+The **⚙ Settings** menu opens with **Ply back** on top, then the source picker. Which rows appear
+below it depends on the source:
+
+| Source | Shows |
+| --- | --- |
+| **Lichess next** | Difficulty only — puzzles come from `/api/puzzle/next` |
+| **My sets** | The set picker and **Puzzle sets…**, for building and managing local sets |
+
+The set picker is hidden until at least one set exists, since with no sets it could only ever read
+"— no sets yet —". On a fresh install you get **Source** and **Puzzle sets…**, which is where you
+build or import your first set.
 
 - **Ply back** (default 4) controls how much of the game's run-up is shown as read-only context.
 - The **move table** lists context moves in standard `N. white black` layout, plus one text input
@@ -173,8 +188,19 @@ devices it waits for you to tap, so the on-screen keyboard never pops up uninvit
 
 A session-scoped strip of small fixed-width bars: **green** = solved with no wrong attempts, **red** = had
 at least one wrong attempt. Each bar is the same short width regardless of how many exist, so the strip
-fills from the left instead of re-dividing the row on every new result. The header shows running
-`Solved · Failed` counts, and only the most recent 25 results are kept and displayed.
+fills from the left instead of re-dividing the row on every new result.
+
+The strip and the `Solved · Failed` counts beside it answer different questions, and are capped
+differently on purpose:
+
+- **The counts are uncapped.** They total every puzzle attempted in the session, so your running accuracy
+  is always accurate no matter how long you drill.
+- **The strip shows the most recent 25.** It has a fixed width, so past 25 the oldest square scrolls off.
+  A small **`+N older`** marker beside the counts tells you how many attempts are not currently drawn —
+  without it, a full row of 25 squares next to a much larger total reads as "that's all of them".
+
+The stored log is bounded at 5000 entries purely as a `localStorage` quota backstop, which is far beyond
+any realistic session.
 
 **↺ Reset session**, beside those counts, clears them on demand. It shares the single `resetScore()`
 path in `main.js` with the setting handlers below, and is disabled while there is nothing to clear — so a
@@ -270,7 +296,7 @@ npm test        # drawer geometry + ply alignment + solving loop + orientation +
 npm run smoke   # needs `npm run preview` running in another terminal
 ```
 
-- **`test:topbar`, `test:flip` and `test:coords` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
+- **`test:topbar`, `test:flip`, `test:coords` and `test:score` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
   (`https://lichess.org/api/puzzle/...`) — nothing is mocked, mirroring the app's own
   no-network-no-app rule. `npm run test:ply` also asserts the exact board FEN and context rows for
   puzzle `Yh7uB`, making it the regression guard for the ply alignment described above.
@@ -286,6 +312,12 @@ npm run smoke   # needs `npm run preview` running in another terminal
 - **`npm run smoke` does not start a server.** It asserts against an already-running
   `npm run preview` on port 4173: that `/` serves, that the JS bundle loads, that the sql.js WASM
   binary is reachable, and that `ORDER BY RANDOM` survived minification.
+- **`npm run test:pwa` also needs `npm run preview`** on port 4173. It launches its own headless
+  Chrome over CDP (no browser-test harness in the repo) and asserts the manifest links and
+  resolves, the service worker registers and activates, nothing cross-origin is ever cached, and the
+  settings-menu rows appear and disappear for each source. It measures real layout heights rather
+  than trusting the `hidden` attribute, since a `display` rule in `style.css` can silently defeat
+  that attribute — which is exactly the bug it guards against.
 
 ## Deployment
 
@@ -379,10 +411,38 @@ There is no `LICENSE` file yet, so the source is currently "all rights reserved"
 before publishing if you want others to reuse it. Note that whatever you choose, the bundled Cburnett
 pieces keep their own terms.
 
+## Install as an app
+
+The app ships a web app manifest (`public/manifest.webmanifest`) and a service worker
+(`public/sw.js`), so Chromium-based browsers will offer to install it.
+
+- **Android / Chrome** — open the site, then the browser menu (⋮) → **Install app**, or accept the
+  install prompt. It gets its own icon and opens without browser chrome.
+- **Desktop Chrome / Edge** — the install icon at the right of the address bar, or menu →
+  **Cast, save and share** → **Install page as app**.
+- **iOS / Safari** — Share → **Add to Home Screen**. iOS ignores most manifest fields, so
+  `apple-touch-icon` supplies the icon.
+
+Two requirements come from the browsers, not the app:
+
+- **HTTPS (or `localhost`).** Service workers are refused on plain `http`, so a LAN IP will not be
+  installable. The GitHub Pages and Render deploys are HTTPS and fine.
+- **A production build.** The worker is skipped under `npm run dev`, since a cached bundle fights
+  Vite's hot reload. Use `npm run build && npm run preview` to try installing locally.
+
+**The service worker is not offline mode.** It caches the app shell — the built JS/CSS/WASM and the
+icons — so an installed app opens instantly. It never caches anything from `lichess.org`: every
+puzzle still comes from the live API, and an unreachable API still produces the same retryable
+error. That is deliberate; see the first bullet under [Known limitations](#known-limitations).
+
+To ship an update to an already-installed app, bump `VERSION` in `public/sw.js`. The new worker
+drops the old cache on activate.
+
 ## Known limitations
 
 - **No offline mode.** If the Lichess API is unreachable the app shows a retryable error and will not
   fall back to anything — by design, since the API is the source of truth for puzzle alignment.
+  The PWA service worker does not change this; it caches the shell only.
 - **The board is static.** It renders from a FEN and never animates — a manual flip only re-orients it
   (the coordinate gutters and the colour circles turn with it), pieces are never dragged and moves are
   never shown on it. Square-to-square drag/tap gestures are
@@ -394,8 +454,8 @@ pieces keep their own terms.
 - **IndexedDB quota.** Safari caps an origin at roughly 1 GB, which is fine for the intended set
   sizes but limits how many large sets you can keep at once.
 - **Most verify scripts need network access,** so `npm test` cannot run offline or in a sandbox
-  without egress. The exceptions are `test:topbar`, `test:flip` and `test:coords` (pure geometry and
-  orientation rules, no network).
+  without egress. The exceptions are `test:topbar`, `test:flip`, `test:coords` and `test:score`
+  (pure geometry, orientation, and score rules, no network).
 
 ## Credits
 

@@ -237,12 +237,22 @@ server behaviour (lichess-org/lila#20293), not a fetch bug. Reveals are delibera
 | IndexedDB | db `chess-puzzle-trainer`, store `sets` | `{ id, name, bytes: Uint8Array, createdAt, puzzleCount, ratingMin, ratingMax }` |
 | localStorage | `cpt.plyBack` | Ply-back setting (default 4) |
 | localStorage | `cpt.activeSet` | Selected set id |
-| localStorage | `cpt.results` | Array of booleans, capped at `MAX_RESULTS = 25` |
+| localStorage | `cpt.results` | Array of booleans, full session; display cap is `MAX_STRIP = 25` |
 | localStorage | `cpt.flipped` | `'1'` while flipped from auto, `'0'` otherwise |
 | localStorage | `cpt.source` | `'sets'` (default) or `'lichess'` |
 | localStorage | `cpt.difficulty` | `''` or one of `NEXT_DIFFICULTIES` |
 | localStorage | `cpt.lichessToken` | Serialized OAuth session (survives reloads) |
 | sessionStorage | `cpt.oauth.verifier`, `cpt.oauth.state` | PKCE verifier + CSRF state, deleted after exchange |
+
+**The score log and the score strip are deliberately two different windows.**
+`getResults()` returns the whole session and feeds the Solved/Failed totals;
+`getStripResults()` slices the last `MAX_STRIP = 25` and feeds the drawn squares.
+This split is load-bearing and was a bug once: `getResults()` used to slice to 25
+and `renderScore()` derived *both* the numbers and the strip from that one array,
+so the totals silently froze after 25 puzzles while the squares kept scrolling.
+`MAX_LOG = 5000` bounds the stored log as a localStorage quota backstop only — it
+is not a display limit. When a visual constraint (the strip's fixed width) needs a
+cap, apply it at draw time, never in the accessor the counters read from.
 
 **`cpt.results` is scoped to the current configuration, not merely to the session.**
 `main.js` exposes a single `resetScore()` (`settings.clearResults()` + `renderScore()`) that

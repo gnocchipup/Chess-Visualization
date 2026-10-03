@@ -10,6 +10,7 @@
 | CSV parsing | `papaparse` | ^5.7.0 (MIT) |
 | Database | `sql.js` (SQLite → WASM) | ^1.14.2 (MIT) |
 | Styling | One hand-written `style.css` | — |
+| PWA | Hand-written `manifest.webmanifest` + `sw.js` — **no plugin** | — |
 | Pieces | Cburnett SVGs, 12 files | — |
 | Tests | Plain Node scripts, no test framework | — |
 
@@ -49,11 +50,13 @@ npm run dev       # dev server with HMR, http://localhost:5173
 npm run build     # production build into dist/
 npm run preview   # serve dist/ at http://localhost:4173
 npm test          # all eight verify scripts in sequence
+npm run test:pwa  # manifest + service worker + settings-menu rows (needs preview)
 npm run smoke     # needs `npm run preview` running in another terminal
 ```
 
 `npm test` runs, in order: `test:topbar`, `test:flip`, `test:coords`, `test:next`,
-`test:ply`, `test:loop`, `test:orient`, `test:drag`.
+`test:ply`, `test:loop`, `test:orient`, `test:drag`. `test:pwa` is **not** in
+`npm test` — like `smoke`, it needs `npm run preview` already serving on 4173.
 
 ## Test inventory
 
@@ -62,17 +65,27 @@ npm run smoke     # needs `npm run preview` running in another terminal
 | `scripts/verify-topbar.mjs` | **yes** | Drawer geometry + header-collapse maths, `MOBILE_QUERY` vs the CSS breakpoint |
 | `scripts/verify-flip.mjs` | **yes** | Orientation rules, `cpt.flipped` round trip, junk-value handling |
 | `scripts/verify-coords.mjs` | **yes** | File letters, rank numbers, colour circles in both orientations |
+| `scripts/verify-score.mjs` | **yes** | Score log vs capped strip, `MAX_LOG` backstop, junk-storage filtering |
 | `scripts/verify-yh7ub.mjs` | no | **Ply-alignment acceptance test** — exact FEN + context rows for `Yh7uB` |
 | `scripts/verify-orientation.mjs` | no | Solver owns `solution[0]`; CSV FEN side is the opponent; white *and* black covered |
 | `scripts/verify-next.mjs` | no | `GET /api/puzzle/next` payload shape |
 | `scripts/verify-solving.mjs` | no | Solving-loop logic |
 | `scripts/verify-drag.mjs` | no | Square-to-square drag-input logic |
 | `scripts/smoke-preview.mjs` | local server | `/` serves, bundle loads, WASM reachable, `ORDER BY RANDOM` survived minification |
+| `scripts/verify-pwa.mjs` | local server + Chrome | Manifest/icons/SW installability, "never cache lichess.org", conditional menu rows |
 
-**Only the first three run offline.** The rest hit the live Lichess API with nothing
+**Only the first four run offline.** The rest hit the live Lichess API with nothing
 mocked, mirroring the app's own no-network-no-app rule. In a sandbox without egress,
-run `npm run test:topbar && npm run test:flip && npm run test:coords` instead of
-`npm test`.
+run `npm run test:topbar && npm run test:flip && npm run test:coords && npm run test:score`
+instead of `npm test`.
+
+`verify-pwa.mjs` is the only script that drives a browser: it spawns
+`chrome.exe --headless=new --remote-debugging-port=9333` with a temp profile and
+talks raw CDP over a `WebSocket`, then kills it. Two traps it exists to catch,
+both invisible to a DOM-free test: a collapsed menu reports height 0 for *every*
+row, and a `display:` author rule silently beats the `hidden` attribute. Chrome
+keeps its profile locked for a moment after exit, so the `rmSync` of the temp dir
+is best-effort — it must never fail the run.
 
 
 ## Test script conventions (follow these when adding one)
@@ -125,6 +138,9 @@ Every verify script follows the same shape, and consistency here matters:
 | `setPointerCapture` | `exercise.js` | Drag tracking |
 | `matchMedia`, `ResizeObserver` | `layout.js` | Collapse measurement; both feature-guarded |
 | `Worker` (via Papa Parse `worker: true`) | `builder.js` | CSV streaming |
+| `navigator.serviceWorker` | `main.js` | Registration only; skipped in DEV and off HTTPS |
+| `caches` (Cache Storage) | `public/sw.js` | App shell only; cross-origin never cached |
+| `env(safe-area-inset-*)` | `style.css` | 0 in a browser tab; only matters when installed |
 
 ## Licensing constraints worth remembering
 

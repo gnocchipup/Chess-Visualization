@@ -67,7 +67,11 @@ working tree clean apart from the untracked `.clinerules/` folder.
 
 - [x] Green/red strip, session-scoped, `cpt.results`
 - [x] `Solved · Failed` counts in the header
-- [x] Capped at the most recent 25
+- [x] **Strip** capped at the most recent 25 (`MAX_STRIP`); **totals uncapped** so
+      running accuracy stays correct past 25 puzzles. A `+N older` marker reports
+      how many attempts are not currently drawn. `MAX_LOG = 5000` is a quota
+      backstop only. The old single capped array froze the counts at 25 — guarded
+      by `scripts/verify-score.mjs`.
 - [x] Fixed-width markers (`flex: 0 0 auto; width: 14px`) — no longer `flex: 1 1 0`, which
       re-divided the full row width on every new result
 - [x] Counter resets when puzzle source, puzzle set, Lichess difficulty, or ply back changes

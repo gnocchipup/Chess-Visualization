@@ -55,6 +55,8 @@ const els = {
 let activeDb = null;
 let activeSetId = null;
 let busy = false;
+/** Whether IndexedDB holds at least one puzzle set; gates the set picker. */
+let hasSets = false;
 
 /* ---------- mock-shell dropdowns (settings gear + account) ---------- */
 
@@ -193,7 +195,13 @@ const exercise = new Exercise({
 /* ---------- score strip ---------- */
 
 function renderScore() {
+  // Two different questions, two different sources. The totals answer "how
+  // have I done this session" and so count the whole log; the strip answers
+  // "what happened recently" and is capped at MAX_STRIP squares, since it has a
+  // fixed width. They used to read the same capped array, which quietly froze
+  // the numbers at the last 25 puzzles.
   const results = settings.getResults();
+  const strip = settings.getStripResults();
   const solved = results.filter(Boolean).length;
   const failed = results.length - solved;
   // Nothing recorded means nothing to clear, so say so on the reset button
@@ -207,11 +215,21 @@ function renderScore() {
     const b2 = document.createElement('b');
     b2.textContent = String(failed);
     els.score.append('Solved ', b1, ' · Failed ', b2);
+    // Once the strip is full, say so — otherwise a full row of squares looks
+    // like "25 puzzles this session" next to a much larger total.
+    if (results.length > strip.length) {
+      const more = document.createElement('span');
+      more.className = 'score-more';
+      const hidden = results.length - strip.length;
+      more.textContent = `+${hidden} older`;
+      more.title =
+        `${results.length} puzzles attempted this session. The strip shows the ` +
+        `most recent ${settings.MAX_STRIP}; the totals above count all of them.`;
+      els.score.append(' ', more);
+    }
   }
   els.scoreStrip.innerHTML = '';
-  // getResults() is already capped at settings.MAX_RESULTS, so the strip and
-  // the Solved/Failed counts always cover the same recent puzzles.
-  for (const ok of results) {
+  for (const ok of strip) {
     const sq = document.createElement('span');
     sq.className = 'sq-result ' + (ok ? 'ok' : 'bad');
     sq.title = ok ? 'Solved' : 'Failed';
@@ -261,6 +279,10 @@ function setLabel(s) {
 
 async function refreshSets() {
   const sets = await idb.listSets();
+  // Read by applySourceVisibility() to decide whether the set picker is a real
+  // choice or just the "— no sets yet —" placeholder. Re-applied at the end so
+  // building, importing, or deleting the last set updates the menu immediately.
+  hasSets = sets.length > 0;
 
   els.setSelect.innerHTML = '';
   if (!sets.length) {
@@ -305,6 +327,10 @@ async function refreshSets() {
   } else {
     await activateSet(null);
   }
+
+  // The set count may have just changed (first build, last delete), which is
+  // exactly what decides whether the set picker is shown.
+  applySourceVisibility();
 }
 
 async function activateSet(id) {
@@ -443,11 +469,26 @@ function isLichessSource() {
   return els.sourceSelect.value === 'lichess';
 }
 
-/** Show/hide the set picker vs difficulty + sign-in row. */
+/**
+ * Show/hide the rows that depend on the chosen source.
+ *
+ * "Lichess next" serves from /api/puzzle/next, whose only knob is difficulty;
+ * a local set has no such notion, so the difficulty row goes away and the set
+ * picker comes in. The builder CTA belongs to the same branch — with Lichess as
+ * the source there are no local sets to manage, and leaving the button there
+ * offered a builder whose result could not be selected.
+ *
+ * The set picker also stays hidden while `hasSets` is false. On a fresh install
+ * it can only render the "— no sets yet —" placeholder, which is not a choice;
+ * the builder CTA is the useful action there, and it is now the only row under
+ * the source picker. `hasSets` is refreshed by refreshSets(), so building or
+ * importing a set makes the row appear without a reload.
+ */
 function applySourceVisibility() {
   const lichess = isLichessSource();
-  els.setSelect.closest('.set-picker').hidden = lichess;
   els.difficultySelect.closest('.difficulty-picker').hidden = !lichess;
+  els.setSelect.closest('.set-picker').hidden = lichess || !hasSets;
+  els.btnBuilder.hidden = lichess;
   // Auth lives in the account dropdown now, and applies to every source
   // (the badge in the header button mirrors the session).
   if (els.authArea) els.authArea.hidden = false;
@@ -615,3 +656,36 @@ refreshSets().catch((err) => {
   els.builder.hidden = false;
   els.builderMsg.textContent = `Storage error: ${err.message}`;
 });
+
+/* ---------- service worker (installability) ---------- */
+
+/**
+ * Register the app-shell service worker.
+ *
+ * Skipped in dev on purpose: a worker caching modules fights Vite's HMR and
+ * serves stale bundles, which is a confusing way to spend an afternoon. It is
+ * also skipped outside a secure context, since browsers refuse registration on
+ * plain http (localhost excepted) — that is why the GitHub Pages / Render
+ * deploys are fine and a LAN IP over http is not.
+ *
+ * The worker is an installability requirement, not an offline feature: it
+ * caches the built shell and nothing else. Lichess API traffic is deliberately
+ * never cached, so the app's no-offline-mode rule is preserved. Every failure
+ * here is swallowed because a missing worker costs the install prompt and
+ * nothing else — the app itself does not depend on it.
+ */
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  if (import.meta.env.DEV) return;
+  if (!window.isSecureContext) return;
+
+  window.addEventListener('load', () => {
+    // Relative URL to match vite.config.js's `base: './'` — the app is served
+    // from a subpath on GitHub Pages, where '/sw.js' would 404.
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      /* No install prompt on this browser/profile; the app still works. */
+    });
+  });
+}
+
+registerServiceWorker();

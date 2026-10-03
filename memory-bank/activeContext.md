@@ -6,18 +6,33 @@ The memory bank was **initialized on 2026-09-27** by reading the entire codebase
 (`index.html`, all 13 `src/` modules, all 9 `scripts/`, `README.md`, `specs.md`,
 `vite.config.js`, `package.json`, the deploy workflow) and the git history.
 
-**No feature work is in progress.** Polish continues. Latest change: the correct/incorrect
-counter got a dedicated **↺ Reset session** button on the score row (it shares the one
-`resetScore()` path with the setting handlers, and is disabled while nothing is recorded),
-and the **flip button is now the ⇅ sign alone** — coloured **blue when unflipped (the
-default) and red when flipped**, the same pair as the haloes on the board's two colour
-circles. Before that, the score strip markers were made fixed-width and the counter started
-resetting whenever puzzle source, puzzle set, difficulty, or ply back changed.
+**Latest work — settings-menu layout + PWA installability** (uncommitted as of this
+session). Three requests, all done:
 
-Verified live in headless Chrome over CDP (not committed, since the repo has no browser-test
-harness): sign-only at 1200 px and 600 px, blue→red→blue on click, `aria-pressed` and
-`cpt.flipped` round-trip, reset disabled/enabled/clears/disables across a reload. `npm run
-build`, the three offline tests and `npm run smoke` all pass.
+1. **Menu order.** *Ply back* moved to the very top of the ⚙ menu, above the source block.
+   The "Display" kicker is gone — with ply back alone above the divider, the heading said
+   nothing. Source picker follows.
+2. **Conditional rows.** `Lichess next` → **Difficulty** only. `My sets` → **Set** +
+   **Puzzle sets…**. The builder CTA now hides for Lichess, which it previously showed
+   while offering a set you could not then select.
+3. **Set picker hidden on a fresh install.** With zero sets it could only read "— no sets
+   yet —". Gated on a new `hasSets` flag, set in `refreshSets()`, which also re-applies
+   visibility so building/importing/deleting the last set updates the menu live.
+4. **PWA.** `public/manifest.webmanifest` + `public/sw.js` + four generated PNGs
+   (192/512/maskable-512/apple-touch), `theme-color`, `viewport-fit=cover`, safe-area
+   padding, and registration in `main.js`.
+
+**A real latent bug was found and fixed along the way.** `.menu-row { display: flex }` is
+an author rule, so it *beat* the UA stylesheet's `[hidden] { display: none }`. Every
+conditional menu row has therefore been visible regardless of what `main.js` set. Fixed
+with `.menu-row[hidden], .menu-cta[hidden] { display: none }`. The codebase already knew
+this class of bug — `.promo-backdrop[hidden]` carries the same comment — so it had simply
+been missed here.
+
+Verified with a new committed script, `scripts/verify-pwa.mjs` (`npm run test:pwa`), which
+launches headless Chrome over CDP against `vite preview`: 27 checks, all passing. It asserts
+real layout heights rather than the `hidden` attribute, because that is precisely the bug.
+`npm run build`, the three offline tests, and the full PWA script pass.
 
 ## Recent changes (most recent first, from git log)
 
@@ -91,6 +106,14 @@ Before starting anything new:
   advance the Lichess queue.
 - **Legacy sign-ins lack `puzzle:write`** and will 403 on report. `hasWriteScope()` is
   what detects this so the UI can say "sign out and sign in again".
+- **A `display` rule beats the `hidden` attribute.** The UA stylesheet's
+  `[hidden] { display: none }` is author-level, so any `.foo { display: flex }` wins.
+  When hiding a laid-out element, restate `.foo[hidden] { display: none }` and verify
+  by *measuring height in a browser* — the attribute will look correct either way.
+- **The service worker must never grow an offline path.** It exists only because
+  Chromium gates "Install app" on a fetch handler. It caches the shell and passes
+  cross-origin straight through. If someone later adds a cached `/api/puzzle/next`
+  fallback, they have reintroduced the alignment bug the project exists to prevent.
 
 ## Project insights worth keeping
 

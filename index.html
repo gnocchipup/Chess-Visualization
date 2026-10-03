@@ -2,9 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Chess Visualization for Noobs</title>
     <link rel="icon" type="image/png" href="./noobvisualize.png" />
+    <!-- PWA / install metadata. manifest + apple-touch-icon + theme-color are
+         what turn a tab into an installable app on Android and desktop
+         (Chrome/Edge offer "Install app" from the manifest; iOS uses
+         apple-touch-icon for the home-screen icon). theme-color also tints the
+         Android status bar and matches --bg in src/style.css, so the installed
+         window does not flash a lighter colour on launch. `viewport-fit=cover`
+         lets the layout reach under the status bar / notch now that the app
+         runs as a standalone window rather than a browser tab. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="theme-color" content="#181512" />
+    <meta
+      name="description"
+      content="Drill chess tactics: walk through a game's run-up and find the move that wins material."
+    />
+    <!-- Desktop installability: without these Chromium treats the app as a
+         plain bookmark rather than an app window. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Chess Noobs" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div class="shell">
@@ -65,28 +89,45 @@
             >
               <span aria-hidden="true">&#9881;</span>
             </button>
+            <!-- Ply back sits on top because it applies to every source: it is
+                 the one display setting you are likely to reach for, and
+                 burying it under a "Display" heading below the source block
+                 made it read as if it belonged to the source picker.
+
+                 Below it the source picker decides the rest of the menu.
+                 "Lichess next" serves from /api/puzzle/next, whose only knob is
+                 difficulty — a local set has no such notion — so the set picker
+                 is hidden. "My sets" is the opposite: difficulty is meaningless
+                 there, while the set picker and the builder CTA are the only way
+                 to choose or create the pool. applySourceVisibility() in
+                 src/main.js is the single place that toggles those rows.
+
+                 The set picker additionally starts hidden on a fresh install:
+                 with no sets it can only ever read "— no sets yet —", which is
+                 a dead control that hides the builder CTA behind it. It appears
+                 the moment the first set exists (see refreshSets). -->
             <div id="settings-menu" class="menu settings-menu" hidden>
+              <label class="menu-row ply-back-picker">
+                <span>Ply back</span>
+                <input id="ply-back" type="number" min="0" step="1" value="4" />
+              </label>
+              <hr class="menu-sep" />
               <p class="menu-kicker">Puzzle source</p>
               <label class="menu-row source-picker">
                 <span>Source</span>
                 <select id="source-select"></select>
               </label>
-              <label class="menu-row set-picker">
-                <span>Set</span>
-                <select id="set-select"></select>
-              </label>
               <label class="menu-row difficulty-picker" hidden>
                 <span>Difficulty</span>
                 <select id="difficulty-select"></select>
               </label>
-              <hr class="menu-sep" />
-              <p class="menu-kicker">Display</p>
-              <label class="menu-row">
-                <span>Ply back</span>
-                <input id="ply-back" type="number" min="0" step="1" value="4" />
+              <label class="menu-row set-picker" hidden>
+                <span>Set</span>
+                <select id="set-select"></select>
               </label>
-              <hr class="menu-sep" />
-              <button id="btn-builder" class="menu-cta" type="button">Puzzle sets&hellip;</button>
+              <button id="btn-builder" class="menu-cta builder-cta" type="button" hidden>
+                Puzzle sets&hellip;
+              </button>
             </div>
           </div>
         </div>

@@ -517,19 +517,35 @@ main {
   padding: 0.6rem 1.1rem 1.2rem;
   align-items: flex-start;
   flex-wrap: nowrap;
-  /* Centre the board + side panel pair instead of hugging the left edge, and
-     cap the total width so the layout stays balanced on a wide monitor. */
+  /* The board sits left and the side panel takes the rest of the row, so the
+     pair stays balanced on a wide monitor without the .shell cap alone. */
   justify-content: flex-start;
   max-width: none;
   margin: 0;
+  /* The two sizing knobs the solving layout shares.
+
+     --board-cap is the board's *ceiling* on a roomy screen; --gutter is the
+     fixed width of the coordinate column that sits outside it.
+
+     Both the board column and the rank gutter used to be sized in viewport
+     units (`min(560px, 92vw)` + an `auto` track). That cannot work: `vw` knows
+     nothing about body's padding, the .shell border or main's own padding, so
+     on a 390px phone the board claimed 358.8px of the ~343px actually
+     available and the rank numbers were pushed off the right edge. Sizing from
+     the *container* instead — `min(100%, ...)` against main's content box —
+     accounts for all of that automatically, and the explicit --gutter stops the
+     rank column from re-introducing the overflow it was previously causing. */
+  --board-cap: 560px;
+  --gutter: 1.15rem;
 }
 
 #board-wrap {
-  flex: 0 0 auto;
-  /* The board's size lives here so the coordinate gutters and the colour
-     circles can be laid out *around* the board without shrinking it — the
-     gutters take their space from the page, not from the squares. */
-  --board-size: min(560px, 90vw);
+  flex: 0 1 auto;
+  min-width: 0;
+  /* Board + rank gutter, and never wider than the row it sits in. `min()` with
+     100% resolves against main's content box, so this is the width the device
+     really has rather than an estimate taken from the viewport. */
+  width: min(100%, calc(var(--board-cap) + var(--gutter)));
   /* Matches the border on .board; the gutters are inset by it so each letter
      and number lines up with the square it labels. */
   --board-border: 4px;
@@ -542,7 +558,10 @@ main {
    exercise.js working on .sq elements alone. */
 .board-frame {
   display: grid;
-  grid-template-columns: var(--board-size) auto;
+  /* Board first, then the fixed-width rank gutter. `minmax(0, 1fr)` lets the
+     board give way when the row is too narrow; the gutter never shrinks, so the
+     coordinates keep their column instead of being squeezed to nothing. */
+  grid-template-columns: minmax(0, 1fr) var(--gutter);
   grid-template-rows: auto auto auto auto;
   /* No gap: the gutter rows must line up exactly with the board's columns. */
   gap: 0;
@@ -560,7 +579,11 @@ main {
   grid-template-rows: repeat(8, 1fr);
   /* Inset by the board's own border so each number centres on its rank, and
      padded off the board's edge. */
-  padding: var(--board-border) 0 var(--board-border) 0.3rem;
+  /* Inset by the board's own border so each number centres on its rank. The
+     horizontal padding is gone: the column is a fixed --gutter wide, so the
+     digits centre in it (see .board-ranks span) rather than being nudged off
+     the board edge. */
+  padding: var(--board-border) 0;
   font-size: 0.68rem;
   color: var(--muted);
   pointer-events: none;
@@ -570,6 +593,7 @@ main {
 .board-ranks span {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .board-files {
@@ -658,7 +682,8 @@ main {
      content-sized, so a sparse rank (no pieces) collapses and its cells
      render as rectangles instead of squares. */
   grid-template-rows: repeat(8, 1fr);
-  /* Sized by the frame's first column (see --board-size above). */
+  /* Sized by the frame's first column, which is the flexible one: the board
+     takes whatever the row has left after the fixed rank gutter. */
   width: 100%;
   aspect-ratio: 1;
   border: var(--board-border) solid var(--border);
@@ -1179,20 +1204,21 @@ fieldset input[type="text"] {
     padding: 0.6rem 0.9rem 1.1rem;
   }
 
-  /* The board keeps its size on a narrow screen; the gutters and colour
-     circles ride along inside the frame (see --board-size above). */
-  #board-wrap {
-    --board-size: min(560px, 92vw);
+  /* Board and side panel stack full-width. The board no longer needs a
+     viewport-sized override: #board-wrap is already `width: min(100%, ...)`, so
+     it tracks this narrower content box on its own. */
+  #board-wrap,
+  #side {
+    flex: 1 1 100%;
+  }
+
+  #side {
+    max-width: min(100%, calc(var(--board-cap) + var(--gutter)));
   }
 
   .board-ranks,
   .board-files {
     font-size: 0.6rem;
-  }
-
-  #side {
-    flex: 1 1 100%;
-    max-width: 560px;
   }
 
   #move-table-wrap {

@@ -114,6 +114,13 @@ Before starting anything new:
   Chromium gates "Install app" on a fetch handler. It caches the shell and passes
   cross-origin straight through. If someone later adds a cached `/api/puzzle/next`
   fallback, they have reintroduced the alignment bug the project exists to prevent.
+- **These projects share a `github.io` origin, so the manifest `id` is load-bearing.**
+  An installed app is keyed by origin + `id`; `"./"` collapses to the app's own
+  directory and collides with sibling apps on the same host (Android install appeared
+  to do nothing). `id` is therefore the absolute path `/Chess-Visualization/`, named
+  after the repo. `start_url`/`scope` stay relative so the relative-base build still
+  works. **Change `id` if the app ever moves host or path**, or it collides again.
+  Pinned by `verify-pwa.mjs` section 1b.
 
 ## Project insights worth keeping
 

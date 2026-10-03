@@ -36,6 +36,15 @@ lerna-debug.log*
 *.db
 *.csv.zst
 
+# ---------- Logs / scratch output ----------
+# `vite preview` is often started with redirected output while testing (see
+# npm run smoke / test:pwa), and those logs land in the repo root. One empty
+# pv.err got committed by accident; keep them out.
+*.log
+pv*.log
+pv*.err
+pwa*.log
+
 # ---------- Editor / OS junk ----------
 .vscode/*
 !.vscode/extensions.json

@@ -72,7 +72,7 @@ npm run smoke     # needs `npm run preview` running in another terminal
 | `scripts/verify-solving.mjs` | no | Solving-loop logic |
 | `scripts/verify-drag.mjs` | no | Square-to-square drag-input logic |
 | `scripts/smoke-preview.mjs` | local server | `/` serves, bundle loads, WASM reachable, `ORDER BY RANDOM` survived minification |
-| `scripts/verify-pwa.mjs` | local server + Chrome | Manifest/icons/SW installability, "never cache lichess.org", conditional menu rows |
+| `scripts/verify-pwa.mjs` | local server + Chrome | Manifest/icons/SW installability, "never cache lichess.org", conditional menu rows, the default source + hidden builder, and phone-width (390/360px) overflow of the builder panel and score strip |
 
 **Only the first four run offline.** The rest hit the live Lichess API with nothing
 mocked, mirroring the app's own no-network-no-app rule. In a sandbox without egress,

@@ -221,11 +221,14 @@ check(
   noCache.crossOrigin.join(', '),
 );
 
-console.log('\n5. Score row: totals uncapped, colour strip capped at 25');
-// Drives the real renderScore() through 40 results — 30 solved then 10 failed —
-// so the last 25 entries hold a different ratio (15/25) from the session
-// (30/40). If the totals were still read from the capped array they would
-// report the strip's numbers and these would fail.
+// MAX_STRIP from src/settings.js, kept as a literal: this script drives the
+// built bundle over CDP and cannot import app modules. 40 attempts — 30 solved
+// then 10 failed — leave the last 22 holding 12 green / 10 red, a different
+// ratio from the session's 30/40, so a capped read of the totals cannot pass
+// the checks below.
+const STRIP_CAP = 22;
+console.log(`\n5. Score row: totals uncapped, colour strip capped at ${STRIP_CAP}`);
+// Drives the real renderScore() through those 40 results.
 const score = await evaluate(`
   localStorage.setItem('cpt.results', JSON.stringify([
     ...Array(30).fill(true),
@@ -249,10 +252,18 @@ const scoreUi = await evaluate(`
     more: document.querySelector('.score-more')?.textContent || null,
   };
 `);
-check('40 results recorded', scoreUi.squares === 25, `${scoreUi.squares} squares drawn`);
-check('squares keep the last 25: 15 green, 10 red', scoreUi.green === 15 && scoreUi.red === 10, `${scoreUi.green}/${scoreUi.red}`);
-check('totals show all 40, not 25', scoreUi.text.includes('30') && scoreUi.text.includes('10'), scoreUi.text);
-check('a "+N older" marker explains the difference', scoreUi.more === '+15 older', scoreUi.more);
+check(`40 results recorded, ${STRIP_CAP} squares drawn`, scoreUi.squares === STRIP_CAP, `${scoreUi.squares} squares drawn`);
+check(
+  `squares keep the last ${STRIP_CAP}: 12 green, 10 red`,
+  scoreUi.green === 12 && scoreUi.red === 10,
+  `${scoreUi.green}/${scoreUi.red}`,
+);
+check(`totals show all 40, not ${STRIP_CAP}`, scoreUi.text.includes('30') && scoreUi.text.includes('10'), scoreUi.text);
+check(
+  'a "+N older" marker explains the difference',
+  scoreUi.more === `+${40 - STRIP_CAP} older`,
+  scoreUi.more,
+);
 await evaluate(`
   localStorage.removeItem('cpt.results');
   location.reload();
@@ -293,6 +304,27 @@ check(
   'difficulty sits under source, not above it',
   order.all.indexOf('difficulty-select') > order.all.indexOf('source-select'),
   order.all.join(' > '),
+);
+
+console.log('\n6b. Fresh profile: Lichess next is the default and the builder stays shut');
+// Nothing has written cpt.source in this run — section 5 only touched
+// cpt.results and removed it again — so this is the true first-run state.
+const fresh = await evaluate(`
+  return {
+    stored: localStorage.getItem('cpt.source'),
+    source: document.getElementById('source-select').value,
+    builderHidden: document.getElementById('builder').hidden,
+    builderHeight: document.getElementById('builder').getBoundingClientRect().height,
+  };
+`);
+check('no source is stored on a fresh profile', fresh.stored === null, String(fresh.stored));
+check('source defaults to "Lichess next"', fresh.source === 'lichess', fresh.source);
+// Measured, not read off the attribute: a display rule beats `hidden` while the
+// attribute still reports true — the bug class section 9 guards.
+check(
+  'puzzle-sets builder is hidden on load',
+  fresh.builderHidden === true && fresh.builderHeight === 0,
+  `hidden=${fresh.builderHidden} height=${fresh.builderHeight}`,
 );
 
 console.log('\n7. Source = "My sets" (fresh install): no set picker, CTA shown');
@@ -373,6 +405,107 @@ check(
   theme.same === true,
   `${theme.meta} vs ${theme.bg}`,
 );
+
+console.log('\n11. The builder panel and the score strip fit a phone viewport');
+// Two widths: 390 (iPhone 14-class) and 360 (the narrowest the app targets). A
+// fixed-width strip and a two-column grid are the two things most likely to
+// push the page sideways, so both are measured for horizontal overflow.
+async function overflowAt(width, height) {
+  await send('Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    deviceScaleFactor: 2,
+    mobile: true,
+  });
+  await sleep(300);
+  return evaluate(`
+    const builder = document.getElementById('builder');
+    builder.hidden = false;
+    // The menu ships collapsed; sections 6+ opened it, but assert it here so
+    // this check does not depend on another section's side effect.
+    const menu = document.getElementById('settings-menu');
+    menu.hidden = false;
+    // A synthetic row stands in for a real set: the builder pipeline needs a
+    // ~1 GB CSV, and this check is about CSS, not parsing. The label is the
+    // longest realistic one setLabel() produces.
+    const list = document.getElementById('set-list');
+    list.innerHTML = '';
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.className = 'set-name';
+    name.textContent = 'Basic 14-18 100pack (1000 puzzles, 1600-2200)';
+    const ex = document.createElement('button');
+    ex.type = 'button';
+    ex.textContent = 'Export';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = 'Delete';
+    li.append(name, ex, del);
+    list.appendChild(li);
+    // The strip is empty here (section 5 cleared it), so fill a full window of
+    // squares to measure the real worst case.
+    const strip = document.getElementById('score-strip');
+    strip.innerHTML = '';
+    for (let i = 0; i < ${STRIP_CAP}; i++) {
+      const s = document.createElement('span');
+      s.className = 'sq-result ' + (i % 2 ? 'ok' : 'bad');
+      strip.appendChild(s);
+    }
+
+    const targets = [
+      ['#builder', builder],
+      ['.builder-grid', builder.querySelector('.builder-grid')],
+      ...[...builder.querySelectorAll('fieldset')].map((f, i) => ['fieldset ' + i, f]),
+      ['.set-list li', li],
+      ['#score-strip', strip],
+      // The menu the user actually screenshotted: at <=900px it is a fixed
+      // sheet spanning the viewport minus its side insets, so it must fit too.
+      ['#settings-menu', menu],
+    ];
+    const wide = targets
+      .filter(([, el]) => el.scrollWidth > el.clientWidth + 1)
+      .map(([label, el]) => label + ' ' + el.scrollWidth + '>' + el.clientWidth);
+    const rect = builder.getBoundingClientRect();
+    // Sizes as well as overflow, so a pass cannot come from collapsed
+    // (zero-width) boxes — and the fieldset widths are what actually prove the
+    // panels stacked. In a two-column grid each one measures ~half of this.
+    const out = {
+      wide,
+      right: Math.round(rect.right),
+      viewport: innerWidth,
+      fieldsets: [...builder.querySelectorAll('fieldset')].map((f) =>
+        Math.round(f.getBoundingClientRect().width),
+      ),
+      row: Math.round(li.getBoundingClientRect().width),
+      bars: strip.children.length,
+    };
+    builder.hidden = true;
+    list.innerHTML = '';
+    strip.innerHTML = '';
+    return out;
+  `);
+}
+for (const w of [390, 360]) {
+  const fit = await overflowAt(w, 844);
+  check(`no horizontal overflow at ${w}px wide`, fit.wide.length === 0, fit.wide.join(', '));
+  check(
+    `builder panel stays inside a ${w}px viewport`,
+    fit.right <= fit.viewport + 1,
+    `right=${fit.right} viewport=${fit.viewport}`,
+  );
+  check(
+    `both builder panels stack full-width at ${w}px`,
+    fit.fieldsets.length === 2 && Math.min(...fit.fieldsets) > 250,
+    fit.fieldsets.join('/') + 'px',
+  );
+  check(
+    `set row and strip really laid out at ${w}px`,
+    fit.row > 250 && fit.bars === STRIP_CAP,
+    `row=${fit.row}px bars=${fit.bars}`,
+  );
+}
+await send('Emulation.clearDeviceMetricsOverride');
+await sleep(200);
 
 ws.close();
 chrome.kill();

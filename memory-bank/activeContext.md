@@ -6,8 +6,34 @@ The memory bank was **initialized on 2026-09-27** by reading the entire codebase
 (`index.html`, all 13 `src/` modules, all 9 `scripts/`, `README.md`, `specs.md`,
 `vite.config.js`, `package.json`, the deploy workflow) and the git history.
 
-**Latest work — settings-menu layout + PWA installability** (uncommitted as of this
-session). Three requests, all done:
+**Latest work — mobile streamlining.** Four requests, all done (uncommitted):
+
+1. **Strip cap 25 → 22** (`MAX_STRIP` in `src/settings.js`) — a mobile width problem, not a
+   scoring one. The squares/gap/padding also shrink under 900px (12px / 2px / 0.5rem),
+   because 22 at the desktop 14px/3px still clipped on a phone.
+2. **Default source is now Lichess next.** `getSource()` honours only an explicit `'sets'`,
+   so an unset key (or junk) means Lichess. A stored value still wins, so an install that
+   already chose My sets does not move — worth remembering when testing the change.
+3. **The builder panel is hidden by default.** `refreshSets()` no longer un-hides `#builder`
+   when there are no sets; it opens from the "Puzzle sets…" CTA plus the two paths that
+   answer a user action (New puzzle with no set, storage error).
+4. **The builder fits a phone.** `.builder-grid > fieldset { flex: 1 1 100% }` under 900px
+   stacks the two panels, and `.set-list li { flex-wrap: wrap }` +
+   `.set-name { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere }` gives the label its
+   own line so Export/Delete can no longer be pushed off-screen. The row-axis basis is
+   deliberate: `flex-direction: column` would resolve `flex: 1` against *height* and
+   collapse both auto-height panels.
+
+Verified: `npm run build`, `npm test` (all nine scripts, exit 0) and `npm run test:pwa` —
+50 assertions, 47 passing. **The 3 failures are pre-existing, not from this work:**
+`public/manifest.webmanifest` has carried absolute `start_url`/`scope` since
+`22efb85 "PWA conflict resolution"`, so §1's "is relative" checks and "id is not merely a
+copy of start_url" fail. Left alone (the commit looks deliberate) and recorded as open
+item 1 in `progress.md`.
+
+### Previous session — settings-menu layout + PWA installability
+
+Three requests, all done:
 
 1. **Menu order.** *Ply back* moved to the very top of the ⚙ menu, above the source block.
    The "Display" kicker is gone — with ply back alone above the divider, the heading said
@@ -30,14 +56,20 @@ this class of bug — `.promo-backdrop[hidden]` carries the same comment — so 
 been missed here.
 
 Verified with a new committed script, `scripts/verify-pwa.mjs` (`npm run test:pwa`), which
-launches headless Chrome over CDP against `vite preview`: 27 checks, all passing. It asserts
-real layout heights rather than the `hidden` attribute, because that is precisely the bug.
+launches headless Chrome over CDP against `vite preview`. It asserts real layout heights
+rather than the `hidden` attribute, because that is precisely the bug. (The script has
+grown since — see the latest entry above for its current coverage and count.)
 `npm run build`, the three offline tests, and the full PWA script pass.
 
 ## Recent changes (most recent first, from git log)
 
 | Commit | What |
 | --- | --- |
+| `22efb85` | PWA conflict resolution (absolute `start_url`/`scope` — see open item 1) |
+| `9eadfab` | part 2/2 from premature commit |
+| `4f9ea7f` | new id for manifest |
+| `bf54d7e` | Layout, PWA, and Scoring |
+| `8c784fd` | Reset session, simplified flip button |
 | `726701f` | Header layout, tighter icons |
 | `225bef6` | Layout updates |
 | `410f7df` | Flip board indicator, mobile layout |

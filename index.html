@@ -95,17 +95,24 @@
                  made it read as if it belonged to the source picker.
 
                  Below it the source picker decides the rest of the menu.
-                 "Lichess next" serves from /api/puzzle/next, whose only knob is
-                 difficulty — a local set has no such notion — so the set picker
-                 is hidden. "My sets" is the opposite: difficulty is meaningless
-                 there, while the set picker and the builder CTA are the only way
-                 to choose or create the pool. applySourceVisibility() in
-                 src/main.js is the single place that toggles those rows.
+                 "Lichess next" is the default (see getSource in
+                 src/settings.js), so a first run shows Ply back, Source and
+                 Difficulty and nothing else. It serves from /api/puzzle/next,
+                 whose only knob is difficulty — a local set has no such notion
+                 — so the set picker is hidden. "My sets" is the opposite:
+                 difficulty is meaningless there, while the set picker and the
+                 builder CTA are the only way to choose or create the pool.
+                 applySourceVisibility() in src/main.js is the single place that
+                 toggles those rows.
 
                  The set picker additionally starts hidden on a fresh install:
                  with no sets it can only ever read "— no sets yet —", which is
                  a dead control that hides the builder CTA behind it. It appears
-                 the moment the first set exists (see refreshSets). -->
+                 the moment the first set exists (see refreshSets).
+
+                 The builder panel below (#builder) also ships hidden and opens
+                 only from the CTA above, so it never buries the board on a
+                 phone before it is asked for. -->
             <div id="settings-menu" class="menu settings-menu" hidden>
               <label class="menu-row ply-back-picker">
                 <span>Ply back</span>
@@ -179,8 +186,8 @@
         <section id="side">
           <div id="puzzle-info" class="puzzle-info">
             <p class="muted" id="empty-state">
-              No puzzle loaded. Select or create a puzzle set, then press
-              <strong>New puzzle</strong>.
+              No puzzle loaded. Press <strong>New puzzle</strong> — it fetches from
+              Lichess, or from one of your own sets once you pick one in Settings.
             </p>
           </div>
           <div id="error-box" class="error" hidden></div>

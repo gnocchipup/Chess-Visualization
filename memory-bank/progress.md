@@ -8,8 +8,9 @@ deliberately, and each is pinned by at least one test where a test is possible. 
 git history is a run of UI/UX refinement commits (board orientation visuals, mobile
 layout, header collapse, colour edits) rather than missing functionality.
 
-Last commit at the time of writing: `726701f "Header layout, tighter icons"` on `main`,
-working tree clean apart from the untracked `.clinerules/` folder.
+Last commit at the time of writing: `22efb85 "PWA conflict resolution"` on `main`. The
+mobile-streamlining changes described under **Scoring** below are uncommitted, alongside the
+untracked `.clinerules/` and `memory-bank/` folders.
 
 ## Feature status
 
@@ -67,11 +68,13 @@ working tree clean apart from the untracked `.clinerules/` folder.
 
 - [x] Green/red strip, session-scoped, `cpt.results`
 - [x] `Solved · Failed` counts in the header
-- [x] **Strip** capped at the most recent 25 (`MAX_STRIP`); **totals uncapped** so
-      running accuracy stays correct past 25 puzzles. A `+N older` marker reports
+- [x] **Strip** capped at the most recent 22 (`MAX_STRIP`); **totals uncapped** so
+      running accuracy stays correct past the cap. A `+N older` marker reports
       how many attempts are not currently drawn. `MAX_LOG = 5000` is a quota
-      backstop only. The old single capped array froze the counts at 25 — guarded
-      by `scripts/verify-score.mjs`.
+      backstop only. The old single capped array froze the counts at the cap —
+      guarded by `scripts/verify-score.mjs` and `verify-pwa.mjs` §5.
+- [x] Mobile strip sizing: 12px squares, 2px gap and 0.5rem side padding under 900px,
+      so all 22 still fit a 360px phone (pinned by `verify-pwa.mjs` §11)
 - [x] Fixed-width markers (`flex: 0 0 auto; width: 14px`) — no longer `flex: 1 1 0`, which
       re-divided the full row width on every new result
 - [x] Counter resets when puzzle source, puzzle set, Lichess difficulty, or ply back changes
@@ -100,16 +103,23 @@ working tree clean apart from the untracked `.clinerules/` folder.
 
 Nothing is explicitly queued. Reasonable candidates, in rough priority order:
 
-1. **Add a `LICENSE` file** — the code is currently all-rights-reserved, which is worth
+1. **Reconcile `public/manifest.webmanifest` with its own tests.** Since
+   `22efb85 "PWA conflict resolution"` it carries absolute `start_url`/`scope`
+   (`/Chess-Visualization/`) as well as an absolute `id`. `verify-pwa.mjs` §1 still
+   asserts the relative `'./'` form, so three assertions fail — and an absolute path
+   would break a move to a different host/path (Render at the domain root). Either
+   restore relative `start_url`/`scope` (keeping `id` absolute, which is what must be
+   unique) or update the assertions and the README to match the new intent.
+2. **Add a `LICENSE` file** — the code is currently all-rights-reserved, which is worth
    resolving before the project is shared or published.
-2. **Consider replacing the 1.3 MB `noobvisualize.png`** — it is used as both favicon and
+3. **Consider replacing the 1.3 MB `noobvisualize.png`** — it is used as both favicon and
    header logo and is unoptimised.
-3. **Tidy the legacy `TopBar` path** — retained, tested, but not reachable. It could be
+4. **Tidy the legacy `TopBar` path** — retained, tested, but not reachable. It could be
    deleted along with `#header-body` / `#drawer-toggle` if the mock-shell header is final.
-4. **Close the `verify-coords.mjs` mirroring gap** — it re-derives `board.js`'s square
+5. **Close the `verify-coords.mjs` mirroring gap** — it re-derives `board.js`'s square
    naming rather than importing it. Extracting that mapping into a pure export would let
    the test use the real thing (see Pattern 1 in `systemPatterns.md`).
-5. **Widen `npm test`'s offline subset** if more network-free invariants come to mind.
+6. **Widen `npm test`'s offline subset** if more network-free invariants come to mind.
 
 ## Decision history (how the project got here)
 

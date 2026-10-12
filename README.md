@@ -108,12 +108,17 @@ below it depends on the source:
 
 | Source | Shows |
 | --- | --- |
-| **Lichess next** | Difficulty only — puzzles come from `/api/puzzle/next` |
+| **Lichess next** (default) | Difficulty only — puzzles come from `/api/puzzle/next` |
 | **My sets** | The set picker and **Puzzle sets…**, for building and managing local sets |
 
+**Lichess next is the default**, so you can solve straight away without building anything first.
+Switch **Source** to **My sets** to reveal the set picker and the **Puzzle sets…** button, then press
+that button to open the builder. The builder panel is hidden on load and only opens from the CTA, so
+it never buries the board on a phone.
+
 The set picker is hidden until at least one set exists, since with no sets it could only ever read
-"— no sets yet —". On a fresh install you get **Source** and **Puzzle sets…**, which is where you
-build or import your first set.
+"— no sets yet —". A stored source choice wins over the default, so choosing **My sets** once keeps
+it across reloads.
 
 - **Ply back** (default 4) controls how much of the game's run-up is shown as read-only context.
 - The **move table** lists context moves in standard `N. white black` layout, plus one text input
@@ -195,9 +200,11 @@ differently on purpose:
 
 - **The counts are uncapped.** They total every puzzle attempted in the session, so your running accuracy
   is always accurate no matter how long you drill.
-- **The strip shows the most recent 25.** It has a fixed width, so past 25 the oldest square scrolls off.
-  A small **`+N older`** marker beside the counts tells you how many attempts are not currently drawn —
-  without it, a full row of 25 squares next to a much larger total reads as "that's all of them".
+- **The strip shows the most recent 22** (`MAX_STRIP` in `src/settings.js`). It has a fixed width, so
+  past 22 the oldest square scrolls off — and on a phone the squares and gaps shrink to 12 px / 2 px so
+  all 22 still fit a 360 px screen. A small **`+N older`** marker beside the counts tells you how many
+  attempts are not currently drawn — without it, a full row of 22 squares next to a much larger total
+  reads as "that's all of them".
 
 The stored log is bounded at 5000 entries purely as a `localStorage` quota backstop, which is far beyond
 any realistic session.

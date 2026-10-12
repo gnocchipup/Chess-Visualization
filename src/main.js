@@ -199,7 +199,7 @@ function renderScore() {
   // have I done this session" and so count the whole log; the strip answers
   // "what happened recently" and is capped at MAX_STRIP squares, since it has a
   // fixed width. They used to read the same capped array, which quietly froze
-  // the numbers at the last 25 puzzles.
+  // the numbers once the strip filled up.
   const results = settings.getResults();
   const strip = settings.getStripResults();
   const solved = results.filter(Boolean).length;
@@ -286,11 +286,17 @@ async function refreshSets() {
 
   els.setSelect.innerHTML = '';
   if (!sets.length) {
+    // The placeholder is never actually seen — applySourceVisibility() hides
+    // the whole set row while `hasSets` is false — but the option has to exist
+    // so the select is never left with nothing to show.
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = '— no sets yet, create one below —';
     els.setSelect.appendChild(opt);
-    els.builder.hidden = false;
+    // The builder is deliberately NOT revealed here. It ships hidden and opens
+    // only from the "Puzzle sets…" CTA (or the two later paths that answer a
+    // user action: the storage-error handler, and New puzzle with no set).
+    // Un-hiding it on every load was what buried the board on a phone.
   } else {
     for (const s of sets) {
       const opt = document.createElement('option');
@@ -602,8 +608,8 @@ els.plyBack.addEventListener('change', () => {
   if (settings.getPlyBack() !== before) resetScore();
 });
 
-// Source picker: local puzzle sets (default, unchanged) vs Lichess next
-// puzzle (/api/puzzle/next, one fetch per New-puzzle press).
+// Source picker: Lichess next (the default — see settings.getSource) vs local
+// puzzle sets. Lichess serves /api/puzzle/next, one fetch per New-puzzle press.
 for (const [value, label] of [['sets', 'My sets'], ['lichess', 'Lichess next']]) {
   const opt = document.createElement('option');
   opt.value = value;

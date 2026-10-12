@@ -1244,8 +1244,41 @@ fieldset input[type="text"] {
     gap: 1rem;
   }
 
-  fieldset {
+  /* One fieldset per row. `flex: 1 1 100%` (a row-axis basis) rather than
+     `flex-direction: column`: in a column container `flex: 1` resolves its
+     basis against *height*, so with an auto-height parent both panels would
+     collapse and spill. Basis 100% keeps the row axis and simply makes each
+     panel claim a full line. Before this the two panels shared ~50% each and
+     the set rows' intrinsic width pushed Export/Delete off the screen. */
+  .builder-grid > fieldset {
+    flex: 1 1 100%;
     min-width: 0;
+  }
+
+  /* A set row: the name gets its own line and the buttons wrap beneath it.
+     The name needs min-width: 0 because a flex item's automatic minimum size
+     is its min-content width — a long set label would otherwise widen the row
+     past the panel instead of wrapping inside it. */
+  .set-list li {
+    flex-wrap: wrap;
+  }
+
+  .set-list li .set-name {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* 22 squares x (12px + 2px) plus the side padding is ~322px, which still
+     clears a 360px phone. At the desktop 14px/3px the capped strip came to
+     371px of content and clipped on every phone width. */
+  .score-strip {
+    gap: 2px;
+    padding: 0.45rem 0.5rem 0.2rem;
+  }
+
+  .score-strip .sq-result {
+    width: 12px;
   }
 
   .file-label input[type=file] {

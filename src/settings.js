@@ -10,9 +10,14 @@ export const DEFAULT_PLY_BACK = 4;
  * only: the strip has a fixed width, so past this point the oldest square
  * scrolls off the left. It deliberately does not limit the Solved/Failed
  * totals beside it — those are the running record of the whole session, and
- * capping them made the counts silently freeze once you passed 25 puzzles.
+ * capping them made the counts silently freeze once you passed the strip's
+ * own length.
+ *
+ * 22 rather than 25: at the 12px square the <=900px rule in style.css uses,
+ * 22 is the most that still fits the narrowest phone the app targets, and the
+ * strip is meant to be a glanceable record rather than a long trend.
  */
-export const MAX_STRIP = 25;
+export const MAX_STRIP = 22;
 
 /**
  * A backstop on the stored log so a very long session cannot fill the
@@ -45,9 +50,17 @@ export function setActiveSetId(id) {
 const KEY_SOURCE = NS + 'source';
 const KEY_DIFFICULTY = NS + 'difficulty';
 
-/** Puzzle source: 'sets' (local SQLite set) or 'lichess' (/api/puzzle/next). */
+/**
+ * Puzzle source: 'lichess' (/api/puzzle/next) or 'sets' (local SQLite set).
+ *
+ * Lichess next is the default because it needs nothing built first — a fresh
+ * install can solve immediately, while the local-set picker is a dead row
+ * until a set exists. Note the normalisation runs toward 'sets' here: only the
+ * explicit 'sets' choice is honoured, so an unset key (or junk) falls back to
+ * Lichess. A stored value still wins, so deliberately choosing 'sets' sticks.
+ */
 export function getSource() {
-  return localStorage.getItem(KEY_SOURCE) === 'lichess' ? 'lichess' : 'sets';
+  return localStorage.getItem(KEY_SOURCE) === 'sets' ? 'sets' : 'lichess';
 }
 
 export function setSource(value) {
@@ -111,7 +124,7 @@ export function pushResult(ok) {
   const arr = getResults();
   arr.push(!!ok);
   // Bounded only by MAX_LOG, a quota backstop — not by MAX_STRIP. Dropping
-  // older entries here is what used to freeze the totals at 25.
+  // older entries here is what used to freeze the totals at the strip cap.
   const trimmed = arr.length > MAX_LOG ? arr.slice(-MAX_LOG) : arr;
   localStorage.setItem(KEY_RESULTS, JSON.stringify(trimmed));
   return trimmed;

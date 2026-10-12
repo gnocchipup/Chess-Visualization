@@ -47,15 +47,15 @@ check('totals count every attempt', ten.length === 10, `len ${ten.length}`);
 check('solved count is right', solvedIn(ten) === 5, `solved ${solvedIn(ten)}`);
 check('strip shows them all while under the cap', getStripResults().length === 10);
 
-console.log('\n3. Past 25 puzzles the strip caps but the totals keep counting');
+console.log(`\n3. Past MAX_STRIP (${MAX_STRIP}) the strip caps but the totals keep counting`);
 clearResults();
-// 40 attempts: 30 solved, 10 failed, so the last 25 entries deliberately hold a
-// different ratio from the whole session. If the totals ever read from the
-// trimmed array again, they report 25-ish and these assertions fail.
+// 40 attempts: 30 solved, 10 failed, so the last MAX_STRIP entries deliberately
+// hold a different ratio from the whole session. If the totals ever read from
+// the trimmed array again, they report the strip's numbers and these fail.
 for (let i = 0; i < 30; i++) pushResult(true);
 for (let i = 0; i < 10; i++) pushResult(false);
 const forty = getResults();
-check('the log is NOT capped at 25', forty.length === 40, `len ${forty.length}`);
+check(`the log is NOT capped at MAX_STRIP (${MAX_STRIP})`, forty.length === 40, `len ${forty.length}`);
 check('solved total counts all 30', solvedIn(forty) === 30, `solved ${solvedIn(forty)}`);
 check('failed total counts all 10', forty.length - solvedIn(forty) === 10);
 check('totals exceed the strip length', forty.length > MAX_STRIP);
@@ -63,9 +63,9 @@ check('totals exceed the strip length', forty.length > MAX_STRIP);
 console.log('\n4. The strip keeps exactly the most recent MAX_STRIP, oldest first');
 const strip = getStripResults();
 check(`strip is capped at MAX_STRIP (${MAX_STRIP})`, strip.length === MAX_STRIP, `len ${strip.length}`);
-check('strip holds the last 25 entries', forty.slice(-MAX_STRIP).join() === strip.join());
+check(`strip holds the last MAX_STRIP (${MAX_STRIP}) entries`, forty.slice(-MAX_STRIP).join() === strip.join());
 check('strip keeps the 10 failures at the end', strip.filter((x) => !x).length === 10);
-// The 15 solved entries pushed before them must have scrolled off, which is the
+// The solved entries pushed before them must have scrolled off, which is the
 // whole reason the totals needed un-capping in the first place.
 check(
   'strip ratio differs from the session ratio',
@@ -78,7 +78,7 @@ clearResults();
 for (let i = 0; i < 120; i++) pushResult(i % 3 !== 0);
 const long = getResults();
 check('120 attempts are all retained', long.length === 120, `len ${long.length}`);
-check('strip still capped at 25', getStripResults().length === MAX_STRIP);
+check(`strip still capped at MAX_STRIP (${MAX_STRIP})`, getStripResults().length === MAX_STRIP);
 check('strip is the true tail', long.slice(-MAX_STRIP).join() === getStripResults().join());
 check('totals reflect all 120', solvedIn(long) === 80, `solved ${solvedIn(long)}`);
 

@@ -9,14 +9,15 @@ git history is a run of UI/UX refinement commits (board orientation visuals, mob
 layout, header collapse, colour edits) rather than missing functionality.
 
 Last commit at the time of writing: `95664f4 "layout fixes"` on `main` (the
-mobile-streamlining work). The **squarish / E-Ink responsive layout** described below, plus
-`scripts/verify-layout.mjs` and `scripts/lib/browser-path.mjs`, are uncommitted. (An earlier
-note here called `.clinerules/` and `memory-bank/` untracked; they are tracked.)
+mobile-streamlining work). The **squarish / E-Ink responsive layout** and the
+**one-screen portrait layout** described below, plus `scripts/verify-layout.mjs` and
+`scripts/lib/browser-path.mjs`, are uncommitted. (An earlier note here called
+`.clinerules/` and `memory-bank/` untracked; they are tracked.)
 
 **Node is installed on this machine as of 2026-10-24** (user-scoped, no admin — see
 `techContext.md`), so the repo's own gate finally runs here: `npm run build` and `npm test`
 exit 0, `npm run test:pwa` is 47 pass / 3 pre-existing manifest failures, and the new
-`npm run test:layout` is 85 checks / 0 failures.
+`npm run test:layout` is 125 checks / 0 failures over ten viewports.
 
 ## Feature status
 
@@ -97,24 +98,32 @@ exit 0, `npm run test:pwa` is 47 pass / 3 pre-existing manifest failures, and th
 
 ### Responsive layout — **complete for phones, tablets and squarish/E-Ink screens**
 
-- [x] Three layout states: desktop (>900px), stacked (<=900px and taller than 5:4), and
-      side-by-side (`<=900px` and `min-aspect-ratio: 5/4`) — the last one being what a 4:3
-      E-Ink reader or a landscape tablet was previously only getting via the browser's
-      "desktop mode"
+- [x] Three layout states: desktop (>900px); **one-screen portrait** (`<=900px` and
+      `max-aspect-ratio: 5/4`) where the card fills the viewport and board + panel share one
+      height budget; and side-by-side (`<=900px` and `min-aspect-ratio: 5/4`) — the last one
+      being what a 4:3 E-Ink reader or a landscape tablet was previously only getting via the
+      browser's "desktop mode"
 - [x] `--board-cap` is a *height* budget in every state (`dvh` with a `vh` fallback), so the
       board never exceeds the screen and the panel's top stays reachable
-- [x] Move table scrolls inside its own column on the squarish layout, keeping **New puzzle**
-      on screen
-- [x] `flex: 0 0 100%` + `max-width` in the stacked state (the old `flex: 1 1 100%` silently
-      discarded the 560px board ceiling below 900px)
+- [x] Move table scrolls inside the panel on both narrow layouts, keeping **New puzzle** on
+      screen; the portrait state additionally makes the *whole page* exactly one screen tall
+      (632x840 went from 1232px to 840px)
+- [x] `Exercise.scrollTableToNewest()` keeps the cell being typed into visible when the move
+      list outgrows its window (scroll only — never `focus()`, which would raise the keyboard)
+- [x] `width` + `max-width` (not a flex basis) on the shared narrow-screen column, because the
+      old `flex: 1 1 100%` silently discarded the 560px board ceiling below 900px
+- [x] The shell, not a flex `body`, owns the viewport height — `#builder` is its sibling, so a
+      flex body squashed the shell to 201px whenever the builder opened
 - [x] `-webkit-text-size-adjust: 100%` against Chromium font boosting (a mobile-viewport-only
       effect that showed up as "fine in desktop mode")
 - [x] Viewport meta without `maximum-scale`, plus `interactive-widget=resizes-content`
-- [x] Pinned by **`npm run test:layout`** (`scripts/verify-layout.mjs`, 85 checks over nine
-      viewports: 4:3 E-Ink both ways, phone both ways, tablet portrait, square, 320px,
-      desktop). It asserts no sideways scroll, a square board inside one screen and under the
-      560px ceiling, panel-same-row + New-puzzle-on-screen for the aspect-ratio layout, and
-      panel-under-board with a shared column width when stacked.
+- [x] Pinned by **`npm run test:layout`** (`scripts/verify-layout.mjs`, 125 checks over ten
+      viewports: 4:3 E-Ink both ways, phone both ways, tablet portrait, 320x568, 320x800,
+      square, desktop). It asserts no sideways scroll, a square board inside one screen and
+      under the 560px ceiling, panel-same-row + New-puzzle-on-screen for the aspect-ratio
+      layout, panel-under-board with a shared column width + the whole page one screen tall
+      (with a usable move-table window) for the portrait layout, and that the builder grows
+      the page rather than squashing the app.
 - [x] Browser lookup is machine-independent: `scripts/lib/browser-path.mjs`
       (`CHROME_PATH`/`CHROME_BIN` → Chrome → Edge → Chromium). `verify-pwa.mjs` previously
       hardcoded `chrome.exe`, which does not exist on machines that ship only Edge.

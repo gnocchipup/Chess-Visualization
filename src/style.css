@@ -1070,7 +1070,7 @@ fieldset input[type="text"] {
 
 /* ---------------------------------------------------------------------------
    Responsive: the mock keeps the gear/account dropdowns on every width, so
-   small screens only stack the board over the side panel (plus a compact
+   small screens only put the board over the side panel (plus a compact
    header). The legacy drawer hooks from src/layout.js (hidden
    #header-body/#topbar) stay display:none and are never rendered. */
 .header-body {
@@ -1229,32 +1229,26 @@ fieldset input[type="text"] {
     display: none;
   }
 
+  /* Mobile base only: the two aspect-ratio blocks below own the geometry
+     (`flex` on the two columns and the board cap), because "stack" means
+     different axes on a phone held upright and a reader held sideways. */
   main {
-    flex-wrap: wrap;
     padding: 0.6rem 0.9rem 1.1rem;
-    /* Stacked: the board gets one screenful at most, so the panel's top (the
-       puzzle link and the Hint button) stays within reach instead of sitting
-       under a board that is taller than the viewport. 12.5rem is the chrome
-       around the board on a phone — the collapsed header, the score row and
-       strip, body/main padding, and the board's own dots plus coordinate rows,
-       measured at ~200px. */
-    --board-cap: min(560px, max(240px, calc(100vh - 12.5rem)));
-    --board-cap: min(560px, max(240px, calc(100dvh - 12.5rem)));
   }
 
-  /* Board and side panel stack, one per line, and both take the *board's*
-     column width so the two read as one card instead of a wide board over a
-     narrower panel.
-
-     `flex: 0 0 100%` (basis, not grow) plus a max-width is deliberate: the
-     previous `flex: 1 1 100%` set flex-basis, and flex-basis beats `width`, so
-     the 560px ceiling on #board-wrap was silently ignored below 900px — a 768px
-     tablet portrait drew a 703px board and a 900px square viewport drew 835px.
-     Basis 100% also guarantees the two stay on separate lines however small the
-     ceiling becomes, and the auto margins centre the column when it does bite. */
+  /* Board and side panel share the *board's* column width, so the two read as
+     one card instead of a wide board over a narrower panel, and the auto
+     margins centre that column when the board ceiling bites. `width` and
+     `max-width` rather than a flex basis: the previous `flex: 1 1 100%` set
+     flex-basis, and flex-basis beats `width`, so the 560px ceiling on
+     #board-wrap was silently ignored below 900px — a 768px tablet portrait
+     drew a 703px board and a 900px square viewport drew 835px. Each layout
+     branch below sets its own `flex`, because the two stack in opposite axes
+     (`column` upright, `row` sideways) and a basis means different things in
+     each. */
   #board-wrap,
   #side {
-    flex: 0 0 100%;
+    width: min(100%, calc(var(--board-cap) + var(--gutter)));
     max-width: min(100%, calc(var(--board-cap) + var(--gutter)));
     margin-inline: auto;
   }
@@ -1264,9 +1258,9 @@ fieldset input[type="text"] {
     font-size: 0.6rem;
   }
 
-  #move-table-wrap {
-    max-height: 45vh;
-  }
+  /* No `max-height` here: both branches below give the move table a *flexed*
+     height inside the panel (one column, one row), which a viewport-percentage
+     cap would only fight with. */
 
   /* Reveal now lives in the side panel's hint line, so the short label is used
      there instead of the full "Reveal solution". */
@@ -1330,6 +1324,119 @@ fieldset input[type="text"] {
 }
 
 /* ---------------------------------------------------------------------------
+   Tall viewports at or under 900px — a phone held upright, a tablet in
+   portrait, and a 4:3 E-Ink reader the tall way round (1680x1264 at DPR 2 is
+   632x840 CSS px).
+
+   A width-only layout gets the *board* on screen but not the app: at 632x840
+   the page came to 1232px, so the move table and both buttons sat below the
+   fold and the solver had to scroll up and down between the board and their own
+   input. Here the card fills the viewport exactly and `main` becomes a column
+   that hands the leftover height to the panel, so the whole app is one
+   screenful: board on top, then the puzzle line (with its Hint button), a move
+   table that scrolls inside itself, and the controls pinned in view.
+
+   The board is what pays for it. `--board-cap` becomes `100dvh - 26rem`:
+   ~25rem of that is everything the panel cannot give up (the puzzle line and
+   its hint row, three table rows, the controls) and the rest is slack — and
+   writing it as a subtraction rather than a fixed number means a taller
+   screen immediately buys a bigger board (a 768x1024 tablet still gets the
+   full 560px ceiling). `vh` is the fallback; `dvh` wins where it is known.
+
+   Deliberately *not* gated on a minimum height: `dvh` follows the on-screen
+   keyboard under `interactive-widget=resizes-content`, so a height threshold
+   would drop the app back to the tall scrolling layout the instant the solver
+   tapped the move input and the keyboard came up. A short viewport instead
+   just runs out of panel and scrolls a little, which is the lesser evil.
+   --------------------------------------------------------------------------- */
+@media (max-width: 900px) and (max-aspect-ratio: 5/4) {
+  /* The card, not the page, is the app frame: body's padding becomes the only
+     thing outside it, symmetric top and bottom, and the shell is exactly one
+     viewport tall. Deliberately *not* "make body a flex column and let the
+     shell grow": the puzzle builder is a sibling of .shell, so a flex body
+     would squash the shell to a fraction of the screen whenever the builder
+     opened instead of letting the page grow. */
+  body {
+    padding: 0.6rem 0.5rem;
+  }
+
+  .shell {
+    display: flex;
+    flex-direction: column;
+    /* Minus body's own 0.6rem top and bottom padding. `box-sizing:
+       border-box` (see the `*` rule) means the shell's 1px border is already
+       inside this figure. */
+    height: calc(100vh - 1.2rem);
+    height: calc(100dvh - 1.2rem);
+  }
+
+  header,
+  .score-row,
+  .score-strip {
+    flex: 0 0 auto;
+  }
+
+  main {
+    flex: 1 1 auto;
+    /* Column, so the board and the panel *share* one height budget instead of
+       each claiming a line of its own. `nowrap` matters: `wrap` in a column
+       container would put the two side by side, which is the landscape block
+       below's job. */
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 0;
+    gap: 0.6rem;
+    --board-cap: min(560px, max(200px, calc(100vh - 26rem)));
+    --board-cap: min(560px, max(200px, calc(100dvh - 26rem)));
+  }
+
+  /* The board column is content-sized and must not grow: in a column container a
+     `flex` basis would be a *height*, so `0 0 auto` keeps the board at exactly
+     board + gutters and lets the panel take everything below it. Its width,
+     max-width and auto margins come from the shared mobile rule. */
+  #board-wrap {
+    flex: 0 0 auto;
+  }
+
+  /* The panel takes the height the board leaves. `min-height: 0` is what lets
+     a flex item actually shrink; without it the column would refuse to go
+     below its content and push the controls off the screen again. */
+  #side {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Whatever the puzzle line and the controls leave is the move table's, and
+     a long move list scrolls inside it. The 4rem floor keeps roughly three
+     rows: below that the panel is unusable, so the page is allowed to scroll
+     rather than squash the table out of existence. */
+  #move-table-wrap {
+    flex: 1 1 auto;
+    min-height: 4rem;
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .controls {
+    margin-top: 0.6rem;
+  }
+
+  /* Tighter than the panel's roomy spacing: the puzzle line plus the controls
+     are ~130px of the board's budget, and every pixel here is a pixel of board. */
+  .puzzle-info {
+    padding-bottom: 0.3rem;
+  }
+
+  .puzzle-info .hint-line {
+    margin-top: 0.3rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Squarish and landscape viewports — 4:3 E-Ink readers, tablets held sideways,
    phones in landscape.
 
@@ -1350,10 +1457,10 @@ fieldset input[type="text"] {
    The threshold is 5/4 rather than 1/1 because the panel takes whatever width
    is left after a height-sized board: on a perfectly square viewport that
    difference is a constant ~120px whatever the size, which is too narrow for a
-   three-column move table. A square screen therefore keeps the stacked layout
-   (and its board ceiling, which still leaves the panel's top on screen), while
-   anything from 5:4 to a phone in landscape gets the side-by-side app. Tall
-   narrow screens never reach this block at all. */
+   three-column move table. A square screen therefore takes the one-screen
+   column layout above (a 900x900 viewport draws a 484px board with the panel
+   under it), while anything from 5:4 to a phone in landscape gets the
+   side-by-side app. Tall narrow screens never reach this block at all. */
 @media (max-width: 900px) and (min-aspect-ratio: 5/4) {
   main {
     flex-wrap: nowrap;
@@ -1364,9 +1471,11 @@ fieldset input[type="text"] {
     --board-cap: min(560px, max(200px, calc(100dvh - 12.5rem)));
   }
 
-  /* Undo the stacked column width and let the panel have the leftover width.
+  /* Undo the shared column width and let the panel have the leftover width.
      `flex: 0 1 auto` + the inherited `width: min(100%, cap)` is the board's own
-     column: it shrinks (0 1) rather than overflowing a narrow row. */
+     column: it shrinks (0 1) rather than overflowing a narrow row. Note the
+     panel's inherited `width` is irrelevant here — `flex-basis: 0` plus
+     `flex-grow` decides a row item's main size, not `width`. */
   #board-wrap {
     flex: 0 1 auto;
     margin-inline: 0;
@@ -1404,7 +1513,7 @@ fieldset input[type="text"] {
 }
 
 /* Very narrow phones (<=380px). The strip draws up to 22 markers at the 12px
-   square the stacked layout uses: 22 x (12 + 2) = 322px, and a 320px screen
+   square the mobile layout uses: 22 x (12 + 2) = 322px, and a 320px screen
    leaves ~288px after body and strip padding. `overflow: hidden` then cut the
    *right-hand* end — the newest results, the ones just earned. 11px fits 22
    markers in 286px, so the whole session stays visible on the narrowest screen

@@ -298,15 +298,19 @@ sign you out, and a restored legacy session without `scopes` is assumed to have 
 not the whole layout question any more. A squarish screen — 4:3 E-Ink readers, tablets on
 their side, phones in landscape — is **narrow and short at the same time**: a Boox Go Color
 7 in mobile mode reports ~840x632 CSS px, so it is under the breakpoint yet has width to
-spare and almost no height.
+spare and almost no height. The same reader held upright is 632x840: narrow and *tall*,
+which needs the opposite answer again.
 
-Three layout states, in cascade order in `src/style.css`:
+Three layout states, in cascade order in `src/style.css` (the `(max-width: 900px)` block
+itself is now only the mobile base — padding, typography, the collapsing header, the
+full-width menu sheet; both aspect blocks below set the geometry, because "stack" means a
+different axis in each):
 
 | Media | Layout | Board ceiling |
 | --- | --- | --- |
 | (base, `min-width: 901px`) | board left, panel right | `min(560px, max(320px, 100dvh - 16rem))` |
-| `(max-width: 900px)` | stacked, one column | `min(560px, max(240px, 100dvh - 12.5rem))` |
-| `(max-width: 900px) and (min-aspect-ratio: 5/4)` | two columns again | `min(560px, max(200px, 100dvh - 12.5rem))` |
+| `(max-width: 900px) and (max-aspect-ratio: 5/4)` | board above panel, **whole app one screen** | `min(560px, max(200px, 100dvh - 26rem))` |
+| `(max-width: 900px) and (min-aspect-ratio: 5/4)` | two columns again, sized from the height | `min(560px, max(200px, 100dvh - 12.5rem))` |
 
 Rules that were learned the hard way:
 
@@ -316,32 +320,52 @@ Rules that were learned the hard way:
   Without it a 4:3 reader drew a 775px board in a 632px viewport and pushed the move table
   ~900px below the fold, with **New puzzle** unreachable — which is exactly why the app
   looked broken in mobile mode and correct in the browser's desktop mode.
-- **`flex-basis` beats `width`.** The stacked layout used `flex: 1 1 100%` on `#board-wrap`,
-  which silently overrode the 560px ceiling: a 768px tablet drew a 703px board and a 900x900
-  square drew 835px. The fix is `flex: 0 0 100%` + `max-width: min(100%, cap)` +
-  `margin-inline: auto`, so the basis still forces one item per line while the cap applies
-  and the column centres when it bites.
+- **`flex-basis` beats `width`.** The old stacked layout used `flex: 1 1 100%` on
+  `#board-wrap`, which silently overrode the 560px ceiling: a 768px tablet drew a 703px
+  board and a 900x900 square drew 835px. The shared narrow-screen rule therefore sizes with
+  `width` **and** `max-width` (`min(100%, cap + gutter)`) plus `margin-inline: auto`, and
+  each branch sets its own `flex` — a basis means "one full line" in the row branch and
+  "the whole column height" in the column branch, so it cannot be shared.
+- **A stacked layout is not a fitting layout.** Below the 5:4 threshold, stacking put the
+  board on screen but left the app 1232px tall at 632x840: the move table and both buttons
+  were below the fold, so the solver scrolled between the board and their own input. The
+  fix is not another board number — it is giving the two children **one height budget**:
+  `.shell` is `calc(100dvh - 1.2rem)` tall (body padding is the only thing outside it), a
+  flex column; `main` is a `column`/`nowrap` flex container that takes the leftover height;
+  `#side` is `flex: 1 1 auto; min-height: 0` and `#move-table-wrap` is
+  `flex: 1 1 auto; min-height: 4rem; overflow-y: auto`. So the table gives up height, not
+  existence, and the controls stay pinned.
+- **Don't reach for a flex `body` to do that.** The puzzle builder (`#builder`) is a
+  *sibling* of `.shell`, so a flex body squashed the shell to 201px the moment the builder
+  opened instead of letting the page grow. An explicit shell height does both jobs;
+  `verify-layout.mjs` has a case that opens the builder and measures.
 - **The threshold is 5/4, not 1/1.** In the two-column state the panel gets whatever width
   the board does not, and on a perfectly square viewport that difference is a constant
-  ~120px at any size — too narrow for a three-column move table. A square screen keeps the
-  stacked layout, whose board ceiling still leaves the panel's top on screen.
-- **The panel scrolls, the page does not.** `#side` is a flex column capped to the board's
-  height with `#move-table-wrap { flex: 1 1 auto; min-height: 4rem; overflow-y: auto }`, so
-  a long move list scrolls inside its own column and the controls stay pinned in view.
+  ~120px at any size — too narrow for a three-column move table. A square screen therefore
+  takes the one-screen column state (900x900 draws a 484px board).
+- **A short table window needs an auto-scroll.** Once the move list scrolls inside the panel,
+  a row appended at the bottom can land below the table's own fold with nothing to reveal
+  it, so `Exercise.scrollTableToNewest()` (called from `addSolverInput` and after `reveal`)
+  scrolls `#move-table-wrap` to the bottom when it overflows. Scroll only, never `focus()`.
 - **`-webkit-text-size-adjust: 100%` on `html`.** Chromium's font boosting only runs in a
   mobile layout viewport, so it can rewrite the move table and builder on a device while a
   desktop-mode window looks fine — another "works in desktop mode only" bug class.
 - **The viewport meta has no `maximum-scale`.** Pinch zoom must stay available (E-Ink
   readers exist to magnify text); `interactive-widget=resizes-content` lets the on-screen
-  keyboard shrink the layout viewport instead of covering the move input.
+  keyboard shrink the layout viewport instead of covering the move input. That is also why
+  the one-screen block is deliberately **not** gated on a minimum height: `dvh` follows the
+  keyboard, so a height threshold would flip the app back to the scrolling layout the moment
+  the solver tapped the input.
 
 Verified twice over: first by measuring boxes in a real browser at 18 viewport sizes, then
-by the committed **`npm run test:layout`** (`scripts/verify-layout.mjs`) — nine viewports,
-85 checks — which asserts no sideways scroll, a square board inside one screen and under the
+by the committed **`npm run test:layout`** (`scripts/verify-layout.mjs`) — ten viewports,
+125 checks — which asserts no sideways scroll, a square board inside one screen and under the
 560px ceiling, panel-in-the-same-row plus New-puzzle-on-screen for the aspect-ratio layout,
-and panel-under-board with a shared column width when stacked. That test was itself
-mutation-checked: restoring the old `flex: 1 1 100%` makes it fail four checks. It runs
-against the built `dist/`, so rebuild after a CSS change.
+and panel-under-board with a shared column width *and the whole page exactly one viewport
+tall* for the portrait layout, plus a builder-open case. That test was itself
+mutation-checked twice: restoring the old `flex: 1 1 100%` fails four checks, and the
+flex-body attempt at the one-screen layout failed the builder case. It runs against the
+built `dist/`, so rebuild after a CSS change.
 
 ## Puzzle-set schema
 

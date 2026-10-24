@@ -24,8 +24,9 @@ Built as a static site: Vite + vanilla JavaScript, `sql.js` (SQLite over WebAsse
   the `Solved · Failed` counts.
 - **Spoiler-safe hints** — the puzzle's rating and themes stay hidden behind a **Hint** button; the
   **Reveal solution** button only appears once you've asked for a hint.
-- **Small-screen layout** — below 900 px the board and the side panel stack, and the header
-  collapses its labels so **New puzzle** and the puzzle link stay reachable.
+- **Small-screen layout** — below 900 px the header collapses its labels and the board sizes itself
+  from the height that's left. Held upright, the whole app — board, puzzle link, move table and both
+  buttons — fits one screen with no page scrolling.
 - **Installable app (PWA)** — a web app manifest plus a service worker let you install it on
   Android and desktop; see [Install as an app](#install-as-an-app).
 
@@ -73,7 +74,7 @@ committed.
 | `npm run test:orient` | Board-orientation rule against live puzzles |
 | `npm run test:drag` | Square-to-square drag-input logic tests |
 | `npm run test:pwa` | Manifest, service worker, and the conditional settings-menu rows (needs `npm run preview`) |
-| `npm run test:layout` | Responsive layout at nine real device viewports, 4:3 E-Ink readers included (needs `npm run preview`) |
+| `npm run test:layout` | Responsive layout at ten real device viewports, 4:3 E-Ink readers included (needs `npm run preview`) |
 | `npm run smoke` | Smoke test a *running* preview server (see [Testing](#testing)) |
 
 ## Using it
@@ -156,20 +157,31 @@ least 5:4.
 | Viewport | Layout |
 | --- | --- |
 | wider than 900px | full header; board left, move table right |
-| 900px or narrower, taller than wide | header collapses to a drag handle; board above the panel |
-| 900px or narrower, 5:4 or wider | header collapses; board left, panel right |
+| 900px or narrower, 5:4 or wider | header collapses; board left, panel right, both sized from the height that's left |
+| 900px or narrower, taller than 5:4 | header collapses; board above the panel, sharing one height budget so the app is exactly one screen tall |
 
-The third row is what makes non-standard, squarish screens work — a 4:3 E-Ink reader such as a Boox
-Go Color 7 is about **840x632 CSS px** in mobile mode, i.e. under the 900px breakpoint but with
-plenty of width and very little height. Width alone therefore used to stack it: a 775px board in a
-632px-tall viewport, with the move table pushed ~900px below the fold. Asking the browser for
-"desktop mode" only appeared to fix it, because that widened the viewport past 900px into a
-two-column layout. The aspect query now does that on its own, with the board sized from the height
-that is left and the move table scrolling inside its own column, so **New puzzle** stays on screen.
+Both narrow rows exist because a width-only rule cannot tell a phone from an E-Ink reader. A 4:3
+reader such as a Boox Go Color 7 is about **840x632 CSS px** lying down and **632x840** upright, i.e.
+under the 900px breakpoint in both orientations, and the two orientations need opposite answers:
 
-On a tall phone the same board ceiling keeps the board to at most one screenful, so the puzzle link
-and **Hint** stay within reach, and the board is never drawn wider than 560px. The score strip keeps
-all 22 of its markers visible down to a 320px-wide screen.
+- **Lying down** there is plenty of width and very little height, so width alone used to stack it: a
+  775px board in a 632px-tall viewport, with the move table pushed ~900px below the fold. Asking the
+  browser for "desktop mode" only appeared to fix it, because that widened the viewport past 900px
+  into a two-column layout. The aspect query does that by itself, sizing the board from the height
+  that is left and scrolling the move table inside its own column, so **New puzzle** stays on screen.
+- **Upright** it stacked correctly but the page still came to 1232px, so you scrolled up and down
+  between the board and the move cell you were typing into. The card now fills the viewport exactly,
+  the board is sized to leave the panel its share (`100dvh - 26rem`), and the move table scrolls
+  inside the panel instead of the page scrolling. Everything — board, puzzle link, **Hint**, the move
+  table and both buttons — is on screen at once, and a taller screen buys a bigger board: a
+  768x1024 portrait tablet still gets the full 560px ceiling.
+
+The board is never drawn wider than 560px, and never smaller than 200px — on a viewport too short for
+both (a 320x568 phone) the panel is allowed to cost a few pixels of scroll rather than shrink the
+board further. The score strip keeps all 22 of its markers visible down to a 320px-wide screen.
+
+Because the move table can now be a short window, a newly appended row is scrolled into view as it
+appears: the cell you are meant to type into is never below the table's own fold.
 
 ### Board orientation
 
@@ -204,11 +216,12 @@ board is never a surprise; flipping back to the default clears both.
 
 #### Small screens
 
-Below 900 px wide the board and the side panel stack, and the header compacts its labels (smaller
-title and logo) so the settings and puzzle link still fit on one row. The move table is capped at
-45 vh so a long solution can't push the controls off-screen — **New puzzle** sits directly beneath
-it with the bare **⇅** flip sign beside it, and the hint line (with **Reveal**
-shortened from *Reveal solution*) stays just above.
+Below 900 px wide the header compacts its labels (smaller title and logo, and a drag handle that
+folds it away) so the settings button and the board keep the screen. The board is sized from the
+height that's left rather than from the width, and the move table scrolls inside the side panel —
+**New puzzle** sits directly beneath it with the bare **⇅** flip sign beside it, and the hint line
+(with **Reveal** shortened from *Reveal solution*) stays just above. Held upright, the card fills the
+viewport exactly, so nothing needs scrolling at all.
 
 The solution cell is only auto-focused when a keyboard and fine pointer are detected; on touch
 devices it waits for you to tap, so the on-screen keyboard never pops up uninvited over the board.
@@ -325,7 +338,7 @@ place both the auto rule and the override are decided.
 ```powershell
 npm test            # drawer geometry + ply alignment + solving loop + orientation + drag input
 npm run smoke       # needs `npm run preview` running in another terminal
-npm run test:layout # needs `npm run preview`; 9 device viewports
+npm run test:layout # needs `npm run preview`; 10 device viewports
 ```
 
 - **`test:topbar`, `test:flip`, `test:coords` and `test:score` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
@@ -351,13 +364,16 @@ npm run test:layout # needs `npm run preview`; 9 device viewports
   than trusting the `hidden` attribute, since a `display` rule in `style.css` can silently defeat
   that attribute — which is exactly the bug it guards against. Chrome is not required: the binary is
   found by `scripts/lib/browser-path.mjs` (`CHROME_PATH`, then Chrome, then Edge, then Chromium).
-- **`npm run test:layout` needs `npm run preview` too**, and asserts the responsive contract at nine
+- **`npm run test:layout` needs `npm run preview` too**, and asserts the responsive contract at ten
   emulated device viewports — including a 4:3 E-Ink reader at 840x632 and 632x840 CSS px, a phone
-  both ways, a portrait tablet, a square viewport, 320px and desktop. Per viewport: no sideways
+  both ways, a portrait tablet, 320px, a square viewport and desktop. Per viewport: no sideways
   scroll, the board is square, respects its 560px ceiling and fits inside one screen, and either sits
   in the same row as the panel with **New puzzle** on screen (5:4 and wider) or directly above it
-  sharing one column width (taller than that). It is the guard for the aspects-not-just-width rule
-  and for `flex-basis` silently overriding the board ceiling.
+  sharing one column width — in which case the *whole page* must also be exactly one screen tall,
+  with the move table still keeping a usable window. One extra case opens the puzzle builder to prove
+  it grows the page instead of squashing the app. It is the guard for the aspects-not-just-width
+  rule, for `flex-basis` silently overriding the board ceiling, and for the portrait layout that used
+  to make you scroll between the board and your own move input.
 
 ## Deployment
 

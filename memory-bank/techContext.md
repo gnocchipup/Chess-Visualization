@@ -109,7 +109,7 @@ npm run build      # production build into dist/
 npm run preview    # serve dist/ at http://localhost:4173
 npm test           # all nine verify scripts in sequence
 npm run test:pwa   # manifest + service worker + settings-menu rows (needs preview)
-npm run test:layout # responsive layout at 9 device viewports (needs preview)
+npm run test:layout # responsive layout at 10 device viewports (needs preview)
 npm run smoke      # needs `npm run preview` running in another terminal
 ```
 
@@ -133,7 +133,7 @@ need `npm run preview` already serving on 4173.
 | `scripts/verify-drag.mjs` | no | Square-to-square drag-input logic |
 | `scripts/smoke-preview.mjs` | local server | `/` serves, bundle loads, WASM reachable, `ORDER BY RANDOM` survived minification |
 | `scripts/verify-pwa.mjs` | local server + Chromium | Manifest/icons/SW installability, "never cache lichess.org", conditional menu rows, the default source + hidden builder, and phone-width (390/360px) overflow of the builder panel and score strip |
-| `scripts/verify-layout.mjs` | local server + Chromium | Responsive layout at 9 device viewports (4:3 E-Ink both ways, phone both ways, tablet portrait, square, 320px, desktop): no sideways scroll, board square / within its 560px ceiling / inside one screen, panel in the same row for the aspect-ratio layout with **New puzzle** on screen, panel under the board and sharing its width when stacked, all `MAX_STRIP` markers drawn |
+| `scripts/verify-layout.mjs` | local server + Chromium | Responsive layout at 10 device viewports (4:3 E-Ink both ways, phone both ways, tablet portrait, 320x568, 320x800, square, desktop): no sideways scroll, board square / within its 560px ceiling / inside one screen, panel in the same row for the aspect-ratio layout with **New puzzle** on screen, panel under the board sharing its width *and the whole page exactly one screen tall* with a usable move-table window for the portrait layout, all `MAX_STRIP` markers drawn, plus a builder-open case |
 
 **Only the first four run offline.** The rest hit the live Lichess API with nothing
 mocked, mirroring the app's own no-network-no-app rule. In a sandbox without egress,
@@ -150,10 +150,13 @@ serve the built `dist/`, not `src/`** — npm run build before re-running after 
 the test happily passes against the old layout (this happened, and looked like the test
 being weak).
 
-`verify-layout.mjs` was mutation-checked when it was written: putting the pre-fix
+`verify-layout.mjs` was mutation-checked twice. Putting the pre-fix
 `flex: 1 1 100%` back makes it fail four checks (board 567px wide on the 4:3 portrait,
 703px on the tablet portrait, 835px on the square, and `bottom=967` against a 900px
-viewport). A layout test that cannot fail is worse than no test.
+viewport). And while the one-screen portrait layout was being written, the first attempt
+sized the app with a flex `body`; that failed the builder case (`shell.h=201` against
+`vh=840`) — which is why that case exists. A layout test that cannot fail is worse than no
+test.
 
 Both exist to catch things a DOM-free test cannot see: a collapsed menu reports height 0 for
 *every* row, a `display:` author rule silently beats the `hidden` attribute, and a layout can

@@ -556,7 +556,27 @@ export class Exercise {
     });
     td.appendChild(input);
     this.inputEls.set(i, input);
+    // The move table is height-budgeted (it scrolls inside the panel under the
+    // board on a portrait screen), so a row appended at the bottom can land
+    // below the fold — and nothing else would ever reveal the cell the solver
+    // is supposed to type into.
+    this.scrollTableToNewest();
     return input;
+  }
+
+  /**
+   * Keep the newest row of the move table visible in the table's own scroll
+   * window. A no-op unless the list is actually taller than its window, so it
+   * cannot disturb a layout where everything already fits.
+   *
+   * Scrolling only, never `focus()` — see the drag-input rule in attempt():
+   * grabbing focus on a touch screen pops the keyboard over the board.
+   */
+  scrollTableToNewest() {
+    const wrap = this.tableEl.parentElement;
+    if (wrap && wrap.scrollHeight > wrap.clientHeight) {
+      wrap.scrollTop = wrap.scrollHeight;
+    }
   }
 
   renderTable() {
@@ -756,6 +776,10 @@ export class Exercise {
       td.textContent = mv.san;
       td.classList.add('revealed');
     }
+    // The last revealed ply may be an opponent move, which appends a row
+    // without going through addSolverInput — scroll once more so the end of
+    // the revealed line is visible.
+    this.scrollTableToNewest();
     this.finish();
   }
 

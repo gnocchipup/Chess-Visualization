@@ -2,7 +2,52 @@
 
 ## Current state
 
-**Latest work — squarish / E-Ink screen layouts** (2026-10-24, uncommitted):
+**Latest work — one-screen portrait layout** (2026-10-24, uncommitted):
+
+The report: the landscape fixes work on the tablet, but held the other way (upright, 1680px
+physical tall → **632x840 CSS px** at DPR 2) "the app is too long and I have to scroll up and
+down". Measured in headless Edge at that exact geometry: the page was **1232px tall**, of
+which the board was 560, and the panel started at y=729 — the move table and both buttons
+were ~400px below the fold, so the solver scrolled between the board and their own input.
+The chrome around `main` is only ~158px, so `main` had 682px of content height and was asking
+for 1073.
+
+The fix is not another board number; it is giving board and panel **one shared height budget**
+(`src/style.css`, a new `@media (max-width: 900px) and (max-aspect-ratio: 5/4)` block):
+
+1. **The card owns the viewport.** `.shell` is `calc(100dvh - 1.2rem)` tall (body's own 0.6rem
+   top/bottom padding is the only thing outside it) and a flex column; `main` is
+   `flex: 1 1 auto; min-height: 0; flex-direction: column; flex-wrap: nowrap`.
+2. **The board is sized to leave the panel its share**: `--board-cap` becomes
+   `min(560px, max(200px, 100dvh - 26rem))` — 424px at 632x840, and still the full 560px
+   ceiling on a 768x1024 tablet.
+3. **The panel takes the rest** (`#side { flex: 1 1 auto; min-height: 0; display: flex;
+   flex-direction: column }`) and the move table flexes inside it
+   (`flex: 1 1 auto; min-height: 4rem; overflow-y: auto`), so the controls stay pinned.
+4. **`Exercise.scrollTableToNewest()`** (`src/exercise.js`, called from `addSolverInput` and at
+   the end of `reveal`) scrolls `#move-table-wrap` to the bottom when it overflows. A short
+   table window would otherwise hide the cell you are meant to type into. Scroll only — never
+   `focus()`, per the drag-input rule.
+5. **Cleanups the change exposed**: the shared `(max-width: 900px)` rule no longer carries a
+   dead `flex: 0 0 100%` basis or a dead `max-height: 45vh` (both branches override them), and
+   `#board-wrap`/`#side` are sized with `width` + `max-width` so each branch can set its own
+   `flex` basis (a basis means "one line" in a row and "the whole column" in a column).
+
+Measured before/after at 11 viewport sizes. Now one screen tall at 632x840 (840 from 1232),
+768x1024, 900x900 (484px board), 393x851, 320x800 and 700x900; unchanged on the landscape and
+desktop states. Two cases are still allowed to overflow: 320x568 (the board's 200px floor
+costs ~6px) and a 500x500 window (the panel cannot fit at all at that size).
+
+**Verified end-to-end on a real Lichess puzzle at 632x840**: `scrollHeight` 840 with the move
+input fully inside the table window; after Hint → Reveal (4 rows, 103px of content in a 77px
+window) the table scrolled itself (`scrollTop=26`) and the page stayed 840.
+
+**Checks**: `npm run build` exit 0; `npm test` exit 0 (nine scripts); `npm run test:pwa` 47
+pass / 3 fail, the same three pre-existing `public/manifest.webmanifest` failures (open item 1
+in `progress.md`); `npm run test:layout` **125 checks / 0 failures** over ten viewports, up
+from 85 over nine.
+
+### Previous session — squarish / E-Ink landscape layouts
 
 The report: on a Boox Go Color 7 (1680x1264 = 4:3, so ~840x632 CSS px in mobile mode) the
 app "breaks" in mobile view and only renders properly with the browser's **desktop mode**
@@ -46,7 +91,7 @@ fit one screen (840x632: 1408px → 632px tall, panel beside the board).
   `chrome.exe` and this machine has only Edge.
 - `npm run test:layout` (new) — 85 checks, 0 failures, over nine device viewports.
 
-### Previous session — mobile streamlining
+### Earlier session — mobile streamlining
 
 Four requests, all done and committed as `95664f4 "layout fixes"`:
 
@@ -73,7 +118,7 @@ Verified: `npm run build`, `npm test` (all nine scripts, exit 0) and `npm run te
 copy of start_url" fail. Left alone (the commit looks deliberate) and recorded as open
 item 1 in `progress.md`.
 
-### Previous session — settings-menu layout + PWA installability
+### Earlier session — settings-menu layout + PWA installability
 
 Three requests, all done:
 
@@ -185,8 +230,24 @@ Before starting anything new:
   When hiding a laid-out element, restate `.foo[hidden] { display: none }` and verify
   by *measuring height in a browser* — the attribute will look correct either way.
 - **`flex-basis` beats `width`.** `flex: 1 1 100%` on a child silently discarded its
-  `width: min(100%, 560px)` ceiling (a 768px tablet drew a 703px board). To cap a flex item
-  and still force one per line, use `flex: 0 0 100%` + `max-width` + `margin-inline: auto`.
+  `width: min(100%, 560px)` ceiling (a 768px tablet drew a 703px board). Cap a flex item with
+  `max-width` instead, and set the basis in the branch that knows its own direction: 100% means
+  "one full line" in a row but "the whole column height" in a column, so it cannot be shared.
+- **"It stacks" is not "it fits".** Stacking only guarantees the parts are reachable by
+  scrolling — at 632x840 that was 1232px of page and the solver scrolled between the board and
+  their own move input. Fitting needs a *shared height budget*: a fixed-height shell, a flex
+  column, and one child allowed to shrink (`min-height: 0` + `overflow-y: auto`).
+- **A flex `body` squashes the shell, because `#builder` is a sibling of `.shell`.** Sizing the
+  app with `body { display: flex; height: 100dvh }` looked right and collapsed the shell to
+  201px the moment the builder opened. Give `.shell` its own
+  `height: calc(100dvh - <body padding>)` instead, and let the page grow around it.
+- **Never gate a layout block on `min-height` when the on-screen keyboard matters.**
+  `interactive-widget=resizes-content` makes `dvh` follow the keyboard, so a height threshold
+  flips the layout the instant a move input is tapped. Degrade by running out of room, not by
+  switching layouts.
+- **A table that scrolls inside the panel needs an auto-scroll.** `#move-table-wrap` is
+  height-budgeted, so a row appended below the fold is invisible and nothing reveals it —
+  `Exercise.scrollTableToNewest()` is what keeps the cell being typed into on screen.
 - **Layout bugs hide behind the browser's desktop mode.** Anything gated on a mobile layout
   viewport — font boosting above all — looks correct in desktop mode and broken on the
   device, so a screen-size bug must be reproduced with *device emulation* (exact CSS

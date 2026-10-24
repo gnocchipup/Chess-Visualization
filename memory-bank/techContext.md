@@ -29,6 +29,62 @@ constraint from `specs.md`, not an omission.
 > this system`. This is the **PowerShell execution policy**, not npm. Use **`npm.cmd`**
 > instead.
 
+> **Node was missing until 2026-10-24, and is now installed without admin rights.**
+> Neither `node` nor `npm` resolved in a fresh shell, so nothing in this repo could build or
+> test. The fix used, because the account is **not** elevated and the MSI route wants UAC:
+>
+> - downloaded the official **win-x64 zip** from `nodejs.org/dist` (latest LTS, **v24.22.1**,
+>   npm 11.19.1) — `curl.exe` works where a background PowerShell's HTTPS call hangs, see
+>   below;
+> - extracted with **`tar.exe -xf`** (`Expand-Archive` on this 36 MB / ~4 000-file zip takes
+>   well over 30 s and is easy to interrupt);
+> - into **`%LOCALAPPDATA%\nodejs`**, so `node.exe` sits at its root, and prepended that
+>   folder to the **user** `PATH` (`[Environment]::SetEnvironmentVariable('Path', ..., 'User')`).
+>   Nothing machine-wide changed, and uninstalling is deleting that one folder.
+>
+> A shell started before the install keeps its old `PATH`; prepend
+> `$env:LOCALAPPDATA\nodejs` or open a new terminal.
+
+> **Only Microsoft Edge is installed — there is no Chrome.** `C:\Program Files (x86)\
+> Microsoft\Edge\Application\msedge.exe` is the only Chromium on the machine, and Chrome is
+> absent from all three usual locations. That made the hardcoded `chrome.exe` path in
+> `verify-pwa.mjs` a real failure on this machine (spawn ENOENT, not a failed check), which is
+> why browser lookup now lives in `scripts/lib/browser-path.mjs` (`CHROME_PATH` → Chrome →
+> Edge → Chromium). Edge speaks the same CDP, so nothing else had to change.
+
+> **`vite preview` binds IPv6 loopback only.** `http://localhost:4173/` answers;
+> `http://127.0.0.1:4173/` is refused. A hand-rolled "is the preview up?" probe must use
+> `localhost` (both committed scripts do).
+
+> **Outbound HTTPS hangs inside a hidden/background PowerShell** (`Start-Process -WindowStyle
+> Hidden`) on this machine — `Invoke-RestMethod` *and* `[Net.WebRequest]` with `$req.Proxy =
+> $null`, while the exact same call in a foreground shell returns in under a second. Two
+> consequences:
+>
+> - anything long-running that a tool call would time out on (downloads, `npm ci`, test
+>   suites) should be started detached with its output redirected to a file, then polled —
+>   but keep *network* steps in the foreground, or use `curl.exe`;
+> - CDP clients must poll `/json/list` with `[System.Net.WebRequest]::Create(...)` +
+>   `$req.Proxy = $null` and, if that still hangs, run in the foreground.
+
+> **Screenshot traps, for anyone repeating the layout measurements by hand:**
+> `--window-size` is not a viewport (Windows enforces a minimum window width, and desktop
+> Chromium maps `width=device-width` to the *screen*, so a narrow window lays out at ~490px
+> or the full screen), and a viewport meta is only applied at *navigation* time — so
+> `Emulation.setDeviceMetricsOverride` must be followed by a reload, or every case reports
+> Chromium's 980px mobile fallback.
+
+> **Never round-trip repo files through `Get-Content` / `Set-Content` in Windows PowerShell
+> 5.1.** Without `-Encoding`, they decode UTF-8 as ANSI: one
+> `(Get-Content f -Raw) -replace … | Set-Content f` turned every `—` in `src/style.css`
+> into `â€”` (and `⇅` into `â‡…`) while leaving the CSS perfectly valid, so nothing failed —
+> only `git diff` showed single-line churn on lines nobody had touched. Repair is possible
+> (`UTF8 → CP1252 bytes → UTF8`) but avoidable: use
+> `[IO.File]::ReadAllText($p, [Text.Encoding]::UTF8)` and
+> `[IO.File]::WriteAllText($p, $s, (New-Object Text.UTF8Encoding($false)))`, or an editor
+> that handles encoding. The repo also normalises to LF on commit (`* text=auto` in
+> `.gitattributes`), so CRLF in the working tree is expected and does not show in diffs.
+
 - **`git` is not on PATH.** The repo is managed through **GitHub Desktop**. To run
   read-only git commands, resolve the bundled binary:
 
@@ -39,24 +95,28 @@ $git = Get-ChildItem "$env:LOCALAPPDATA\GitHubDesktop\app-*\resources\app\git\cm
 & $git log --oneline -10
 ```
 
-- Cline's memory reset means `.clinerules/` and `memory-bank/` are untracked (`??` in
-  `git status`) — that is expected, not a mistake to fix.
+- **`.clinerules/` and `memory-bank/` are tracked** (7 files, `git ls-files` lists them).
+  An earlier note here claimed they were untracked — that was wrong, and it matters: they
+  are part of the repo, so edits to them show up as `M` and belong in the same commit as
+  the work they describe.
 
 ## Commands
 
 ```powershell
-npm ci            # exact install from package-lock.json
-npm run dev       # dev server with HMR, http://localhost:5173
-npm run build     # production build into dist/
-npm run preview   # serve dist/ at http://localhost:4173
-npm test          # all eight verify scripts in sequence
-npm run test:pwa  # manifest + service worker + settings-menu rows (needs preview)
-npm run smoke     # needs `npm run preview` running in another terminal
+npm ci             # exact install from package-lock.json
+npm run dev        # dev server with HMR, http://localhost:5173
+npm run build      # production build into dist/
+npm run preview    # serve dist/ at http://localhost:4173
+npm test           # all nine verify scripts in sequence
+npm run test:pwa   # manifest + service worker + settings-menu rows (needs preview)
+npm run test:layout # responsive layout at 9 device viewports (needs preview)
+npm run smoke      # needs `npm run preview` running in another terminal
 ```
 
-`npm test` runs, in order: `test:topbar`, `test:flip`, `test:coords`, `test:next`,
-`test:ply`, `test:loop`, `test:orient`, `test:drag`. `test:pwa` is **not** in
-`npm test` — like `smoke`, it needs `npm run preview` already serving on 4173.
+`npm test` runs, in order: `test:topbar`, `test:flip`, `test:coords`, `test:score`,
+`test:next`, `test:ply`, `test:loop`, `test:orient`, `test:drag`. `test:pwa`,
+`test:layout` and `smoke` are **not** in `npm test` — like the others in that group they
+need `npm run preview` already serving on 4173.
 
 ## Test inventory
 
@@ -72,21 +132,34 @@ npm run smoke     # needs `npm run preview` running in another terminal
 | `scripts/verify-solving.mjs` | no | Solving-loop logic |
 | `scripts/verify-drag.mjs` | no | Square-to-square drag-input logic |
 | `scripts/smoke-preview.mjs` | local server | `/` serves, bundle loads, WASM reachable, `ORDER BY RANDOM` survived minification |
-| `scripts/verify-pwa.mjs` | local server + Chrome | Manifest/icons/SW installability, "never cache lichess.org", conditional menu rows, the default source + hidden builder, and phone-width (390/360px) overflow of the builder panel and score strip |
+| `scripts/verify-pwa.mjs` | local server + Chromium | Manifest/icons/SW installability, "never cache lichess.org", conditional menu rows, the default source + hidden builder, and phone-width (390/360px) overflow of the builder panel and score strip |
+| `scripts/verify-layout.mjs` | local server + Chromium | Responsive layout at 9 device viewports (4:3 E-Ink both ways, phone both ways, tablet portrait, square, 320px, desktop): no sideways scroll, board square / within its 560px ceiling / inside one screen, panel in the same row for the aspect-ratio layout with **New puzzle** on screen, panel under the board and sharing its width when stacked, all `MAX_STRIP` markers drawn |
 
 **Only the first four run offline.** The rest hit the live Lichess API with nothing
 mocked, mirroring the app's own no-network-no-app rule. In a sandbox without egress,
 run `npm run test:topbar && npm run test:flip && npm run test:coords && npm run test:score`
 instead of `npm test`.
 
-`verify-pwa.mjs` is the only script that drives a browser: it spawns
-`chrome.exe --headless=new --remote-debugging-port=9333` with a temp profile and
-talks raw CDP over a `WebSocket`, then kills it. Two traps it exists to catch,
-both invisible to a DOM-free test: a collapsed menu reports height 0 for *every*
-row, and a `display:` author rule silently beats the `hidden` attribute. Chrome
-keeps its profile locked for a moment after exit, so the `rmSync` of the temp dir
-is best-effort — it must never fail the run.
+Two scripts drive a browser — `verify-pwa.mjs` (port 9333) and `verify-layout.mjs` (9334).
+Both launch a headless Chromium with a temp profile and talk CDP, and both get the binary
+from **`scripts/lib/browser-path.mjs`** (`CHROME_PATH` / `CHROME_BIN` → Chrome → Edge →
+Chromium), so neither cares whether Chrome is installed. `verify-layout.mjs` deliberately
+reloads after `setDeviceMetricsOverride` — a viewport meta is applied at navigation time,
+so measuring first would report Chromium's 980px mobile fallback for every size. **Both
+serve the built `dist/`, not `src/`** — npm run build before re-running after a CSS edit, or
+the test happily passes against the old layout (this happened, and looked like the test
+being weak).
 
+`verify-layout.mjs` was mutation-checked when it was written: putting the pre-fix
+`flex: 1 1 100%` back makes it fail four checks (board 567px wide on the 4:3 portrait,
+703px on the tablet portrait, 835px on the square, and `bottom=967` against a 900px
+viewport). A layout test that cannot fail is worse than no test.
+
+Both exist to catch things a DOM-free test cannot see: a collapsed menu reports height 0 for
+*every* row, a `display:` author rule silently beats the `hidden` attribute, and a layout can
+be "correct" at 390px while a 4:3 screen 900px wide stacks itself into an unusable state.
+The browser keeps its profile locked for a moment after exit, so the `rmSync` of the temp
+dir is best-effort in both scripts — it must never fail the run.
 
 ## Test script conventions (follow these when adding one)
 
@@ -141,6 +214,7 @@ Every verify script follows the same shape, and consistency here matters:
 | `navigator.serviceWorker` | `main.js` | Registration only; skipped in DEV and off HTTPS |
 | `caches` (Cache Storage) | `public/sw.js` | App shell only; cross-origin never cached |
 | `env(safe-area-inset-*)` | `style.css` | 0 in a browser tab; only matters when installed |
+| `dvh` units + `aspect-ratio` media feature | `style.css` | `dvh` needs Chromium 108+; every use is preceded by a `vh` line as the fallback. `aspect-ratio` media queries are 88+, so the squarish layout degrades to the stacked one on an older E-Ink browser rather than breaking |
 
 ## Licensing constraints worth remembering
 

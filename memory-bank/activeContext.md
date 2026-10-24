@@ -2,11 +2,53 @@
 
 ## Current state
 
-The memory bank was **initialized on 2026-09-27** by reading the entire codebase
-(`index.html`, all 13 `src/` modules, all 9 `scripts/`, `README.md`, `specs.md`,
-`vite.config.js`, `package.json`, the deploy workflow) and the git history.
+**Latest work — squarish / E-Ink screen layouts** (2026-10-24, uncommitted):
 
-**Latest work — mobile streamlining.** Four requests, all done (uncommitted):
+The report: on a Boox Go Color 7 (1680x1264 = 4:3, so ~840x632 CSS px in mobile mode) the
+app "breaks" in mobile view and only renders properly with the browser's **desktop mode**
+forced. Reproduced and measured in headless Edge: what mobile mode did was take the
+`<=900px` *stacked* layout, which drew a **775px board inside a 632px-tall viewport**, made
+the page 1408px tall, and left the move table ~900px below the fold with **New puzzle**
+unreachable. Desktop mode "worked" only because it widened the viewport past 900px into the
+existing two-column layout.
+
+Fixes, all in `src/style.css` plus the viewport meta in `index.html`:
+
+1. **A third layout state**: `@media (max-width: 900px) and (min-aspect-ratio: 5/4)` puts the
+   board and panel side by side again, sized from the height that is left, with the move
+   table scrolling inside its own column. 5/4 rather than 1/1 because on a perfectly square
+   viewport the leftover panel width is a constant ~120px at any size.
+2. **`--board-cap` became a height budget** in all three states (`min(560px, max(Npx,
+   100dvh - Nrem))`, with a `vh` fallback line first). That is what fixes both the short/wide
+   case and the tablet-portrait case (board was 703px on 768x1024; now 560px).
+3. **Found a latent CSS bug**: the stacked layout's `flex: 1 1 100%` set *flex-basis*, which
+   beats `width`, so the 560px board ceiling had been silently ignored below 900px. Now
+   `flex: 0 0 100%` + `max-width: min(100%, cap)` + `margin-inline: auto`.
+4. **`html { -webkit-text-size-adjust: 100% }`** — Chromium's font boosting only runs in a
+   mobile layout viewport, so it is another "fine in desktop mode, broken on the device" bug.
+5. **Score strip on the narrowest phones**: at 320px the 22 markers overflowed and
+   `overflow: hidden` cut the *newest* results; 11px markers under 380px fit all 22.
+6. **Viewport meta**: added `interactive-widget=resizes-content`; deliberately no
+   `maximum-scale` (pinch zoom must stay available on an E-Ink device).
+
+Measured before/after at 18 viewport sizes (840x632, 672x505, 851x393, 632x840, 900x900,
+768x1024, 500x500, 320x568, 412x915, 393x851, 1024x768, 1280x800, 1280x600, 1920x1080,
+700x900, 320x800, 568x320, 600x600): zero horizontal overflow, and the short/wide cases now
+fit one screen (840x632: 1408px → 632px tall, panel beside the board).
+
+**Verified** (Node installed on this machine on 2026-10-24, see `techContext.md`):
+
+- `npm run build` — exit 0
+- `npm test` — exit 0, all nine scripts
+- `npm run test:pwa` — 47 pass / 3 fail, and the 3 are the **pre-existing**
+  `public/manifest.webmanifest` absolute `start_url`/`scope` failures recorded as open item 1
+  in `progress.md`. Before this session the script could not run at all here: it hardcoded
+  `chrome.exe` and this machine has only Edge.
+- `npm run test:layout` (new) — 85 checks, 0 failures, over nine device viewports.
+
+### Previous session — mobile streamlining
+
+Four requests, all done and committed as `95664f4 "layout fixes"`:
 
 1. **Strip cap 25 → 22** (`MAX_STRIP` in `src/settings.js`) — a mobile width problem, not a
    scoring one. The squares/gap/padding also shrink under 900px (12px / 2px / 0.5rem),
@@ -142,6 +184,13 @@ Before starting anything new:
   `[hidden] { display: none }` is author-level, so any `.foo { display: flex }` wins.
   When hiding a laid-out element, restate `.foo[hidden] { display: none }` and verify
   by *measuring height in a browser* — the attribute will look correct either way.
+- **`flex-basis` beats `width`.** `flex: 1 1 100%` on a child silently discarded its
+  `width: min(100%, 560px)` ceiling (a 768px tablet drew a 703px board). To cap a flex item
+  and still force one per line, use `flex: 0 0 100%` + `max-width` + `margin-inline: auto`.
+- **Layout bugs hide behind the browser's desktop mode.** Anything gated on a mobile layout
+  viewport — font boosting above all — looks correct in desktop mode and broken on the
+  device, so a screen-size bug must be reproduced with *device emulation* (exact CSS
+  viewport), not merely a narrow desktop window.
 - **The service worker must never grow an offline path.** It exists only because
   Chromium gates "Install app" on a fetch handler. It caches the shell and passes
   cross-origin straight through. If someone later adds a cached `/api/puzzle/next`

@@ -2,9 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- `width=device-width` + `initial-scale=1` is what stops a phone (and an
+         E-Ink reader) from laying the page out at ~980px and then zooming out.
+         There is deliberately no `maximum-scale` / `user-scalable=no`: pinch
+         zoom must stay available, especially on a device whose whole point is
+         magnifying text.
+
+         `interactive-widget=resizes-content` makes the on-screen keyboard
+         shrink the layout viewport instead of overlaying it, so the move input
+         stays visible while typing and the `dvh`-sized board shrinks to fit
+         rather than disappearing behind the keyboard. Browsers that do not know
+         the key ignore it. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <title>Chess Visualization for Noobs</title>
     <link rel="icon" type="image/png" href="./noobvisualize.png" />

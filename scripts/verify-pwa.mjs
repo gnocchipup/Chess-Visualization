@@ -5,16 +5,28 @@
 //
 //   node scripts/verify-pwa.mjs
 //
-// Chrome is launched here over CDP (--headless --remote-debugging-port) so the
-// committed repo still needs no browser-test harness.
+// A headless Chromium is launched here over CDP (--headless=new
+// --remote-debugging-port) so the committed repo still needs no browser-test
+// harness. Any Chromium build will do — see scripts/lib/browser-path.mjs, which
+// finds one (Chrome, Edge, Chromium, or `CHROME_PATH`).
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolveBrowserPath } from './lib/browser-path.mjs';
 
 const BASE = 'http://localhost:4173';
-const CHROME = 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME = resolveBrowserPath();
 const PORT = 9333;
+
+if (!CHROME) {
+  console.error(
+    'No Chromium-family browser found.\n' +
+      'Install Chrome or Edge, or point CHROME_PATH at a Chromium binary.',
+  );
+  process.exit(1);
+}
+console.log(`Using browser: ${CHROME}`);
 
 let failures = 0;
 const check = (label, cond, extra = '') => {

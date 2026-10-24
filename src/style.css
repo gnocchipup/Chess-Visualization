@@ -19,6 +19,19 @@
   box-sizing: border-box;
 }
 
+/* Chromium's "font boosting"/text autosizing inflates the font size of large
+   text blocks on pages it decides are mobile. It only runs in a mobile layout
+   viewport, so in practice it rewrites the move table, the builder fields and
+   the score row on a phone while leaving a desktop-mode window alone — text
+   that fits on desktop then spills out of its columns on the device. Pinning
+   the adjustment to 100% keeps the typography the CSS asks for. (E-Ink readers
+   are the loudest offenders: they report unusual widths and densities, which is
+   exactly what makes the autosizer guess.) */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, sans-serif;
@@ -534,8 +547,21 @@ main {
      available and the rank numbers were pushed off the right edge. Sizing from
      the *container* instead — `min(100%, ...)` against main's content box —
      accounts for all of that automatically, and the explicit --gutter stops the
-     rank column from re-introducing the overflow it was previously causing. */
-  --board-cap: 560px;
+     rank column from re-introducing the overflow it was previously causing.
+
+     The ceiling is also bounded by *height* now: 560px is the right size on a
+     roomy screen, but a short and wide window (a landscape tablet, a 4:3 E-Ink
+     reader, a half-snapped desktop window) has plenty of width and no height to
+     spare, and an unbounded board there simply runs off the bottom of the
+     screen. 16rem is the chrome above and below the board on a wide screen —
+     body padding, the full (uncollapsed) header, the two score rows, main's own
+     padding and the board's dots plus coordinate rows; it is what makes a
+     1280x800 window fit exactly instead of overflowing by the 8px it used to.
+     The `vh` line is the fallback; `dvh` (which follows the collapsing Android
+     toolbar) wins where it is understood, and the max() keeps the board usable
+     rather than microscopic on an absurdly short viewport. */
+  --board-cap: min(560px, max(320px, calc(100vh - 16rem)));
+  --board-cap: min(560px, max(320px, calc(100dvh - 16rem)));
   --gutter: 1.15rem;
 }
 
@@ -1190,8 +1216,12 @@ fieldset input[type="text"] {
     width: auto;
     max-width: none;
     /* A tall menu, or a short viewport in landscape, scrolls rather than
-       running off the bottom. */
+       running off the bottom. `vh` is the fallback: on an Android browser the
+       large viewport includes the collapsible toolbar, so `100vh` can already
+       be taller than the visible area; `dvh` tracks what is really on screen
+       and wins wherever it is understood. */
     max-height: calc(100vh - 4.5rem);
+    max-height: calc(100dvh - 4.5rem);
     overflow-y: auto;
   }
 
@@ -1202,18 +1232,31 @@ fieldset input[type="text"] {
   main {
     flex-wrap: wrap;
     padding: 0.6rem 0.9rem 1.1rem;
+    /* Stacked: the board gets one screenful at most, so the panel's top (the
+       puzzle link and the Hint button) stays within reach instead of sitting
+       under a board that is taller than the viewport. 12.5rem is the chrome
+       around the board on a phone — the collapsed header, the score row and
+       strip, body/main padding, and the board's own dots plus coordinate rows,
+       measured at ~200px. */
+    --board-cap: min(560px, max(240px, calc(100vh - 12.5rem)));
+    --board-cap: min(560px, max(240px, calc(100dvh - 12.5rem)));
   }
 
-  /* Board and side panel stack full-width. The board no longer needs a
-     viewport-sized override: #board-wrap is already `width: min(100%, ...)`, so
-     it tracks this narrower content box on its own. */
+  /* Board and side panel stack, one per line, and both take the *board's*
+     column width so the two read as one card instead of a wide board over a
+     narrower panel.
+
+     `flex: 0 0 100%` (basis, not grow) plus a max-width is deliberate: the
+     previous `flex: 1 1 100%` set flex-basis, and flex-basis beats `width`, so
+     the 560px ceiling on #board-wrap was silently ignored below 900px — a 768px
+     tablet portrait drew a 703px board and a 900px square viewport drew 835px.
+     Basis 100% also guarantees the two stay on separate lines however small the
+     ceiling becomes, and the auto margins centre the column when it does bite. */
   #board-wrap,
   #side {
-    flex: 1 1 100%;
-  }
-
-  #side {
+    flex: 0 0 100%;
     max-width: min(100%, calc(var(--board-cap) + var(--gutter)));
+    margin-inline: auto;
   }
 
   .board-ranks,
@@ -1285,3 +1328,90 @@ fieldset input[type="text"] {
     max-width: 100%;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Squarish and landscape viewports — 4:3 E-Ink readers, tablets held sideways,
+   phones in landscape.
+
+   Width alone is the wrong question once the viewport is at least square. A
+   1680x1264 E-Ink screen in mobile mode is about 840x632 CSS pixels: under the
+   900px breakpoint, so it took the stacked layout above, which drew a 775px
+   board inside a 632px-tall viewport and pushed the move table ~900px below the
+   fold. Asking the browser for "desktop mode" only appeared to fix it because
+   that widened the viewport past 900px into a two-column layout — so this block
+   is that layout, sized from the height that is actually left.
+
+   The tallest case here has ~12.5rem of chrome around the board (body padding,
+   the collapsed header, the two score rows, main's padding and the board's own
+   dot plus coordinate rows), so the board ceiling is whatever height remains.
+   `vh` is the fallback for browsers without `dvh`; the max() floor keeps the
+   board tappable rather than microscopic.
+
+   The threshold is 5/4 rather than 1/1 because the panel takes whatever width
+   is left after a height-sized board: on a perfectly square viewport that
+   difference is a constant ~120px whatever the size, which is too narrow for a
+   three-column move table. A square screen therefore keeps the stacked layout
+   (and its board ceiling, which still leaves the panel's top on screen), while
+   anything from 5:4 to a phone in landscape gets the side-by-side app. Tall
+   narrow screens never reach this block at all. */
+@media (max-width: 900px) and (min-aspect-ratio: 5/4) {
+  main {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0.9rem;
+    padding: 0.5rem 0.7rem 0.8rem;
+    --board-cap: min(560px, max(200px, calc(100vh - 12.5rem)));
+    --board-cap: min(560px, max(200px, calc(100dvh - 12.5rem)));
+  }
+
+  /* Undo the stacked column width and let the panel have the leftover width.
+     `flex: 0 1 auto` + the inherited `width: min(100%, cap)` is the board's own
+     column: it shrinks (0 1) rather than overflowing a narrow row. */
+  #board-wrap {
+    flex: 0 1 auto;
+    margin-inline: 0;
+  }
+
+  /* The panel is capped to the board's height (plus the board's gutters) so the
+     two columns read as one card, and anything longer than that — a full move
+     list is the normal case — scrolls inside #move-table-wrap instead of
+     pushing "New puzzle" off the bottom of the screen. That unreachable button
+     was the worst part of the stacked layout on a short viewport. */
+  #side {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    margin-inline: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(var(--board-cap) + 3.5rem);
+  }
+
+  #move-table-wrap {
+    flex: 1 1 auto;
+    min-height: 4rem;
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .controls {
+    margin-top: 0.5rem;
+  }
+
+  .score-row {
+    padding-top: 0.35rem;
+  }
+}
+
+/* Very narrow phones (<=380px). The strip draws up to 22 markers at the 12px
+   square the stacked layout uses: 22 x (12 + 2) = 322px, and a 320px screen
+   leaves ~288px after body and strip padding. `overflow: hidden` then cut the
+   *right-hand* end — the newest results, the ones just earned. 11px fits 22
+   markers in 286px, so the whole session stays visible on the narrowest screen
+   the app targets. */
+@media (max-width: 380px) {
+  .score-strip .sq-result {
+    width: 11px;
+  }
+}
+

@@ -18,6 +18,7 @@
     "test:topbar": "node scripts/verify-topbar.mjs",
     "test:next": "node scripts/verify-next.mjs",
     "test:pwa": "node scripts/verify-pwa.mjs",
+    "test:layout": "node scripts/verify-layout.mjs",
     "smoke": "node scripts/smoke-preview.mjs"
   },
   "dependencies": {

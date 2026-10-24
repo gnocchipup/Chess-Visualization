@@ -73,6 +73,7 @@ committed.
 | `npm run test:orient` | Board-orientation rule against live puzzles |
 | `npm run test:drag` | Square-to-square drag-input logic tests |
 | `npm run test:pwa` | Manifest, service worker, and the conditional settings-menu rows (needs `npm run preview`) |
+| `npm run test:layout` | Responsive layout at nine real device viewports, 4:3 E-Ink readers included (needs `npm run preview`) |
 | `npm run smoke` | Smoke test a *running* preview server (see [Testing](#testing)) |
 
 ## Using it
@@ -146,6 +147,29 @@ it across reloads.
 - **Reveal solution** fills the remaining cells in a muted style and marks the puzzle failed. It
   appears in the hint line only after you've pressed **Hint**, so it's never offered to a solver who
   hasn't asked for help. It disappears again once the puzzle is served or revealed.
+
+### Screen size
+
+The layout answers two questions rather than one: how wide the viewport is, *and* whether it is at
+least 5:4.
+
+| Viewport | Layout |
+| --- | --- |
+| wider than 900px | full header; board left, move table right |
+| 900px or narrower, taller than wide | header collapses to a drag handle; board above the panel |
+| 900px or narrower, 5:4 or wider | header collapses; board left, panel right |
+
+The third row is what makes non-standard, squarish screens work — a 4:3 E-Ink reader such as a Boox
+Go Color 7 is about **840x632 CSS px** in mobile mode, i.e. under the 900px breakpoint but with
+plenty of width and very little height. Width alone therefore used to stack it: a 775px board in a
+632px-tall viewport, with the move table pushed ~900px below the fold. Asking the browser for
+"desktop mode" only appeared to fix it, because that widened the viewport past 900px into a
+two-column layout. The aspect query now does that on its own, with the board sized from the height
+that is left and the move table scrolling inside its own column, so **New puzzle** stays on screen.
+
+On a tall phone the same board ceiling keeps the board to at most one screenful, so the puzzle link
+and **Hint** stay within reach, and the board is never drawn wider than 560px. The score strip keeps
+all 22 of its markers visible down to a 320px-wide screen.
 
 ### Board orientation
 
@@ -299,8 +323,9 @@ place both the auto rule and the override are decided.
 ## Testing
 
 ```powershell
-npm test        # drawer geometry + ply alignment + solving loop + orientation + drag input
-npm run smoke   # needs `npm run preview` running in another terminal
+npm test            # drawer geometry + ply alignment + solving loop + orientation + drag input
+npm run smoke       # needs `npm run preview` running in another terminal
+npm run test:layout # needs `npm run preview`; 9 device viewports
 ```
 
 - **`test:topbar`, `test:flip`, `test:coords` and `test:score` run offline; the rest of `npm test` requires network access.** Those verify scripts hit the live Lichess API
@@ -320,11 +345,19 @@ npm run smoke   # needs `npm run preview` running in another terminal
   `npm run preview` on port 4173: that `/` serves, that the JS bundle loads, that the sql.js WASM
   binary is reachable, and that `ORDER BY RANDOM` survived minification.
 - **`npm run test:pwa` also needs `npm run preview`** on port 4173. It launches its own headless
-  Chrome over CDP (no browser-test harness in the repo) and asserts the manifest links and
+  Chromium over CDP (no browser-test harness in the repo) and asserts the manifest links and
   resolves, the service worker registers and activates, nothing cross-origin is ever cached, and the
   settings-menu rows appear and disappear for each source. It measures real layout heights rather
   than trusting the `hidden` attribute, since a `display` rule in `style.css` can silently defeat
-  that attribute — which is exactly the bug it guards against.
+  that attribute — which is exactly the bug it guards against. Chrome is not required: the binary is
+  found by `scripts/lib/browser-path.mjs` (`CHROME_PATH`, then Chrome, then Edge, then Chromium).
+- **`npm run test:layout` needs `npm run preview` too**, and asserts the responsive contract at nine
+  emulated device viewports — including a 4:3 E-Ink reader at 840x632 and 632x840 CSS px, a phone
+  both ways, a portrait tablet, a square viewport, 320px and desktop. Per viewport: no sideways
+  scroll, the board is square, respects its 560px ceiling and fits inside one screen, and either sits
+  in the same row as the panel with **New puzzle** on screen (5:4 and wider) or directly above it
+  sharing one column width (taller than that). It is the guard for the aspects-not-just-width rule
+  and for `flex-basis` silently overriding the board ceiling.
 
 ## Deployment
 

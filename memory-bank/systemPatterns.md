@@ -216,7 +216,9 @@ server behaviour (lichess-org/lila#20293), not a fetch bug. Reveals are delibera
   class, the header is simply always visible — a page whose script never ran is not
   unreachable. Desktop uses `display: contents` so the markup lays out as if the wrapper
   weren't there. All collapse rules are media-scoped to `(max-width: 900px)`, and
-  `MOBILE_QUERY` is asserted equal to the CSS breakpoint by `verify-topbar.mjs`.
+  `MOBILE_QUERY` is asserted equal to the CSS breakpoint by `verify-topbar.mjs` — which is
+  why the squarish two-column layout was added as a *second* `max-width: 900px` block
+  rather than by changing that number (see Pattern 11).
 - **Legacy `TopBar` drawer** is retained in `layout.js` and in `index.html` as a no-op
   fallback, guarded by `hidden` and wrapped in `try/catch`. It is tested but not live.
 - **Auto-focus is gated on `isKeyboardFirst()`** — `(hover: hover) and (pointer: fine)`
@@ -289,6 +291,57 @@ result does not re-divide the row and shrink every existing marker.
 the DB per transaction, resolving on `complete` and rejecting on `error`/`abort`. The
 OAuth session is in-memory first; the localStorage copy exists only so a reload doesn't
 sign you out, and a restored legacy session without `scopes` is assumed to have full scope.
+
+## Pattern 11 — The responsive layout keys off width *and* aspect ratio
+
+`MOBILE_QUERY` (`max-width: 900px`) still decides whether the header collapses, but it is
+not the whole layout question any more. A squarish screen — 4:3 E-Ink readers, tablets on
+their side, phones in landscape — is **narrow and short at the same time**: a Boox Go Color
+7 in mobile mode reports ~840x632 CSS px, so it is under the breakpoint yet has width to
+spare and almost no height.
+
+Three layout states, in cascade order in `src/style.css`:
+
+| Media | Layout | Board ceiling |
+| --- | --- | --- |
+| (base, `min-width: 901px`) | board left, panel right | `min(560px, max(320px, 100dvh - 16rem))` |
+| `(max-width: 900px)` | stacked, one column | `min(560px, max(240px, 100dvh - 12.5rem))` |
+| `(max-width: 900px) and (min-aspect-ratio: 5/4)` | two columns again | `min(560px, max(200px, 100dvh - 12.5rem))` |
+
+Rules that were learned the hard way:
+
+- **The ceiling is a height budget, not a magic number.** Every `--board-cap` is "whatever
+  height is left after the chrome", expressed in `dvh` with a `vh` fallback line before it
+  (Chromium < 108 ignores `dvh`, and an invalid value would drop the whole declaration).
+  Without it a 4:3 reader drew a 775px board in a 632px viewport and pushed the move table
+  ~900px below the fold, with **New puzzle** unreachable — which is exactly why the app
+  looked broken in mobile mode and correct in the browser's desktop mode.
+- **`flex-basis` beats `width`.** The stacked layout used `flex: 1 1 100%` on `#board-wrap`,
+  which silently overrode the 560px ceiling: a 768px tablet drew a 703px board and a 900x900
+  square drew 835px. The fix is `flex: 0 0 100%` + `max-width: min(100%, cap)` +
+  `margin-inline: auto`, so the basis still forces one item per line while the cap applies
+  and the column centres when it bites.
+- **The threshold is 5/4, not 1/1.** In the two-column state the panel gets whatever width
+  the board does not, and on a perfectly square viewport that difference is a constant
+  ~120px at any size — too narrow for a three-column move table. A square screen keeps the
+  stacked layout, whose board ceiling still leaves the panel's top on screen.
+- **The panel scrolls, the page does not.** `#side` is a flex column capped to the board's
+  height with `#move-table-wrap { flex: 1 1 auto; min-height: 4rem; overflow-y: auto }`, so
+  a long move list scrolls inside its own column and the controls stay pinned in view.
+- **`-webkit-text-size-adjust: 100%` on `html`.** Chromium's font boosting only runs in a
+  mobile layout viewport, so it can rewrite the move table and builder on a device while a
+  desktop-mode window looks fine — another "works in desktop mode only" bug class.
+- **The viewport meta has no `maximum-scale`.** Pinch zoom must stay available (E-Ink
+  readers exist to magnify text); `interactive-widget=resizes-content` lets the on-screen
+  keyboard shrink the layout viewport instead of covering the move input.
+
+Verified twice over: first by measuring boxes in a real browser at 18 viewport sizes, then
+by the committed **`npm run test:layout`** (`scripts/verify-layout.mjs`) — nine viewports,
+85 checks — which asserts no sideways scroll, a square board inside one screen and under the
+560px ceiling, panel-in-the-same-row plus New-puzzle-on-screen for the aspect-ratio layout,
+and panel-under-board with a shared column width when stacked. That test was itself
+mutation-checked: restoring the old `flex: 1 1 100%` makes it fail four checks. It runs
+against the built `dist/`, so rebuild after a CSS change.
 
 ## Puzzle-set schema
 
